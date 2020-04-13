@@ -145,7 +145,7 @@ class KiwixStorage:
 
     BUCKET_NAME = "bucketname"
     KEY_ID = "keyid"
-    SECRET_KEY = "secretaccesskey"
+    SECRET_KEY = "secretaccesskey"  # nosec
     ENDPOINT_URL = "endpoint_url"
 
     EXTRA_ARGS_KEY = "ExtraArgs"
@@ -315,13 +315,8 @@ class KiwixStorage:
         if not list_buckets and not bucket and not write and not read:
             raise ValueError("Nothing to test your credentials over.")
         try:
-            try:
-                _ = self.client  # make sure this didn't fail
-
-                if list_buckets:
-                    self.test_access_list_buckets()
-            except botocore.exceptions.ClientError as exc:
-                raise AuthenticationError(f"{exc}")
+            if list_buckets:
+                self.test_access_list_buckets()
 
             bucket_name = bucket if isinstance(bucket, str) else None
 
