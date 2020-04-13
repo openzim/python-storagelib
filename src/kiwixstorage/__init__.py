@@ -30,7 +30,7 @@ from aws_requests_auth.aws_auth import AWSRequestsAuth  # aws-requests-auth==0.4
 logger = logging.getLogger(__name__)
 
 
-class TransferHook(object):
+class TransferHook:
     """ Generic transfer hook based on size """
 
     def __init__(
@@ -94,22 +94,20 @@ class FileTransferHook(TransferHook):
             super().__call__(bytes_amount)
 
 
-class HeadStat(object):
+class HeadStat:
     """ easy access to useful object properties """
 
-    def __init__(self, data={}):
-        self.data = data
+    def __init__(self, data=None):
+        self.data = data or {}
 
-    def __dict__(self):
-        return ", ".join(
+    def __repr__(self):
+        values = ", ".join(
             [
                 f"{k}={getattr(self, k)}"
                 for k in ("mtime", "size", "etag", "type", "meta")
             ]
         )
-
-    def __repr__(self):
-        return f"{self.__class__.__name__}({self.__dict__()})"
+        return f"{self.__class__.__name__}({values})"
 
     def __str__(self):
         return str(self.__repr__())
@@ -143,7 +141,7 @@ class NotFoundError(Exception):
     pass
 
 
-class KiwixStorage(object):
+class KiwixStorage:
 
     BUCKET_NAME = "bucketname"
     KEY_ID = "keyid"
@@ -318,7 +316,7 @@ class KiwixStorage(object):
             raise ValueError("Nothing to test your credentials over.")
         try:
             try:
-                self.client  # make sure this didn't fail
+                _ = self.client  # make sure this didn't fail
 
                 if list_buckets:
                     self.test_access_list_buckets()
@@ -339,7 +337,7 @@ class KiwixStorage(object):
 
             if read and (read is not True or not write):
                 self.test_access_read(
-                    read=str(read), bucket_name=bucket_name,
+                    key=str(read), bucket_name=bucket_name,
                 )
         except AuthenticationError as exc:
             if failsafe:
@@ -393,11 +391,11 @@ class KiwixStorage(object):
         bucket_name = self._bucket_name_param(bucket_name)
         try:
             self.get_object_head(key, bucket_name)
-        except botocore.exceptions.ClientError as e:
-            error_code = int(e.response["Error"]["Code"])
+        except botocore.exceptions.ClientError as exc:
+            error_code = int(exc.response["Error"]["Code"])
             if error_code == 403:
                 raise AuthenticationError(f"Authorization Error testing key={key}")
-            elif error_code == 404:
+            if error_code == 404:
                 return False
         return True
 
@@ -405,11 +403,11 @@ class KiwixStorage(object):
         bucket_name = self._bucket_name_param(bucket_name)
         try:
             s3_etag = self.get_object_etag(key, bucket_name)
-        except botocore.exceptions.ClientError as e:
-            error_code = int(e.response["Error"]["Code"])
+        except botocore.exceptions.ClientError as exc:
+            error_code = int(exc.response["Error"]["Code"])
             if error_code == 403:
                 raise AuthenticationError(f"Authorization Error testing key={key}")
-            elif error_code == 404:
+            if error_code == 404:
                 return False
         return etag == s3_etag
 
@@ -417,11 +415,11 @@ class KiwixStorage(object):
         bucket_name = self._bucket_name_param(bucket_name)
         try:
             (meta,) = self.get_object_head(key, bucket_name, only=[self.META_KEY])
-        except botocore.exceptions.ClientError as e:
-            error_code = int(e.response["Error"]["Code"])
+        except botocore.exceptions.ClientError as exc:
+            error_code = int(exc.response["Error"]["Code"])
             if error_code == 403:
                 raise AuthenticationError(f"Authorization Error testing key={key}")
-            elif error_code == 404:
+            if error_code == 404:
                 return False
 
         return meta.get(tag) == value
@@ -505,6 +503,7 @@ class KiwixStorage(object):
         url = f"{self.wasabi_url}/{bucket_name}?force_delete=true"
         req = requests.delete(url, auth=self.aws_auth)
         req.raise_for_status()
+        return req
 
     def rename_bucket(self, new_bucket_name, bucket_name=None):
         """ change name or a bucket """
@@ -656,15 +655,18 @@ class KiwixStorage(object):
 
         return f"https://{self.url.netloc}/{bucket_name}/{key}"
 
-    def validate_file_etag(self, fpath: pathlib.Path, etag: str):
+    @classmethod
+    def validate_file_etag(cls, fpath: pathlib.Path, etag: str):
         """ Validates a server ETag matches a local file
 
             Using recipe from https://teppen.io/2018/10/23/aws_s3_verify_etags/ """
 
-        def factor_of_1MB(filesize, num_parts):
-            x = filesize / int(num_parts)
-            y = x % 1048576
-            return int(x + 1048576 - y)
+        # pylint: disable=C0321
+
+        def factor_of_1mb(filesize, num_parts):
+            part_size = filesize / int(num_parts)
+            remainder = part_size % 1048576
+            return int(part_size + 1048576 - remainder)
 
         def possible_partsizes(filesize, num_parts):
             return (
@@ -674,21 +676,21 @@ class KiwixStorage(object):
 
         def calc_etag(fpath, partsize):
             md5_digests = []
-            with open(fpath, "rb") as f:
-                for chunk in iter(lambda: f.read(partsize), b""):
-                    md5_digests.append(hashlib.md5(chunk).digest())
+            with open(fpath, "rb") as fh:
+                for chunk in iter(lambda: fh.read(partsize), b""):
+                    md5_digests.append(hashlib.md5(chunk).digest())  # nosec
             return (
-                hashlib.md5(b"".join(md5_digests)).hexdigest()
+                hashlib.md5(b"".join(md5_digests)).hexdigest()  # nosec
                 + "-"
                 + str(len(md5_digests))
             )
 
         def md5sum(fpath):
-            h = hashlib.md5()
-            with open(fpath, "rb") as f:
-                for chunk in iter(lambda: f.read(2 ** 20 * 8), b""):
-                    h.update(chunk)
-            return h.hexdigest()
+            digest = hashlib.md5()  # nosec
+            with open(fpath, "rb") as fh:
+                for chunk in iter(lambda: fh.read(2 ** 20 * 8), b""):
+                    digest.update(chunk)
+            return digest.hexdigest()
 
         filesize = fpath.stat().st_size
         num_parts = etag.rsplit("-", 1)[-1]
@@ -702,7 +704,7 @@ class KiwixStorage(object):
         partsizes = [
             8388608,  # aws_cli/boto3
             15728640,  # s3cmd
-            factor_of_1MB(filesize, num_parts),  # many clients to upload large files
+            factor_of_1mb(filesize, num_parts),  # many clients to upload large files
         ]
 
         for partsize in filter(possible_partsizes(filesize, num_parts), partsizes):
