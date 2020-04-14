@@ -12,6 +12,7 @@
     A few additional wrappers are in place to simplify common actions.
     Also, non-S3, wasabi-specific features are exposed directly. """
 
+import os
 import sys
 import uuid
 import json
@@ -25,7 +26,7 @@ import threading
 import boto3
 import botocore
 import requests
-from aws_requests_auth.aws_auth import AWSRequestsAuth  # aws-requests-auth==0.4.2
+from aws_requests_auth.aws_auth import AWSRequestsAuth
 
 logger = logging.getLogger(__name__)
 
@@ -168,6 +169,9 @@ class KiwixStorage:
 """
 
     def __init__(self, url, **kwargs):
+        if os.getenv("AWS_PROFILE"):
+            logger.warning("removing `AWS_PROFILE` variable from environment")
+            del(os.environ["AWS_PROFILE"])
         self._resource = self._bucket = None
         self._params = {}
         self._parse_url(url, **kwargs)
@@ -331,10 +335,11 @@ class KiwixStorage:
                 )
 
             if read and (read is not True or not write):
+                print(f"{read=}")
                 self.test_access_read(
                     key=str(read), bucket_name=bucket_name,
                 )
-        except AuthenticationError as exc:
+        except (AuthenticationError, self.client.exceptions.NoSuchBucket) as exc:
             if failsafe:
                 return False
             raise exc
