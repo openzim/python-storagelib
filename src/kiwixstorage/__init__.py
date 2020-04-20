@@ -335,7 +335,6 @@ class KiwixStorage:
                 )
 
             if read and (read is not True or not write):
-                print(f"{read=}")
                 self.test_access_read(
                     key=str(read), bucket_name=bucket_name,
                 )
@@ -624,7 +623,6 @@ class KiwixStorage:
         kwargs = self._mix_kwargs(
             meta=meta, progress=progress, progress_fpath=fpath, **kwargs
         )
-        print(kwargs)
         bucket.upload_file(Filename=str(fpath), Key=key, **kwargs)
 
     def download_file(self, key, fpath, bucket_name=None, progress=False, **kwargs):
