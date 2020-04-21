@@ -171,7 +171,7 @@ class KiwixStorage:
     def __init__(self, url, **kwargs):
         if os.getenv("AWS_PROFILE"):
             logger.warning("removing `AWS_PROFILE` variable from environment")
-            del(os.environ["AWS_PROFILE"])
+            del os.environ["AWS_PROFILE"]
         self._resource = self._bucket = None
         self._params = {}
         self._parse_url(url, **kwargs)

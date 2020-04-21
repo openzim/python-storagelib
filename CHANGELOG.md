@@ -3,7 +3,7 @@
 * more flexible requirements for requests
 * removed some debug prints
 * don't fail if `AWS_PROFILE` environ is present
-* added `test_credentials` script to test an URL
+* added `s3_test_url` script to test an URL
 
 # 0.1
 
