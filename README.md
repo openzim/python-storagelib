@@ -36,7 +36,7 @@ if not s3.check_credentials(list_buckets=True, failsafe=True):
 online_url = "https://xxx"
 fpath = "/local/path.ext"
 # retrieve origin etag
-etag = req.headers.get("Etag")
+etag = requests.head(online_url, allow_redirects=True).headers.get("Etag")
 # check if we have that very same version in store
 if s3.has_matching_object(key=url, etag=etag)
     # lastest version in our store, download from there (using progress output)
