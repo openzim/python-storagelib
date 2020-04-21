@@ -4,6 +4,7 @@
 * removed some debug prints
 * don't fail if `AWS_PROFILE` environ is present
 * added `s3_test_url` script to test an URL
+* added `delete_object()` shortcut
 
 # 0.1
 
