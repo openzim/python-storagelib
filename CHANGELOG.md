@@ -1,3 +1,7 @@
+# 0.3
+
+* added `has_object_matching()` to check an object with multiple key/value pairs
+
 # 0.2
 
 * more flexible requirements for requests

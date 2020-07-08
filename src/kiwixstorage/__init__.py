@@ -423,6 +423,23 @@ class KiwixStorage:
 
         return meta.get(tag) == value
 
+    def has_object_matching(self, key, meta, bucket_name=None):
+        """ check whether we have an object matching all key-value pairs supplied """
+        bucket_name = self._bucket_name_param(bucket_name)
+        try:
+            (remote,) = self.get_object_head(key, bucket_name, only=[self.META_KEY])
+        except botocore.exceptions.ClientError as exc:
+            error_code = int(exc.response["Error"]["Code"])
+            if error_code == 403:
+                raise AuthenticationError(f"Authorization Error testing key={key}")
+            if error_code == 404:
+                return False
+
+        for key, value in meta.items():
+            if value is not None and remote.get(key) != value:
+                return False
+        return True
+
     def get_object(self, key, bucket_name=None):
         bucket_name = self._bucket_name_param(bucket_name)
         return self.resource.Object(bucket_name=bucket_name, key=key)
