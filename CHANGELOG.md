@@ -1,3 +1,7 @@
+# 0.5
+
+* n/a
+
 # 0.4
 
 * progress report uses humanfriendly if available
