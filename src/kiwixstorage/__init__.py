@@ -27,6 +27,11 @@ import boto3
 import botocore
 import requests
 from aws_requests_auth.aws_auth import AWSRequestsAuth
+try:
+    from humanfriendly import format_size
+except ImportError:
+    def format_size(num_bytes, keep_width=False, binary=False):
+        return str(num_bytes)
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +59,7 @@ class TransferHook:
     def __call__(self, bytes_amount):
         self.seen_so_far += bytes_amount
         if self.size > 0:
-            total = self.size
+            total = format_size(self.size, binary=True)
             percentage = (self.seen_so_far / self.size) * 100
         else:
             total = "?"
@@ -62,7 +67,8 @@ class TransferHook:
         self.output.write(
             self.fmt.format(
                 name=self.name,
-                progress=self.seen_so_far,
+                on=datetime.datetime.now().isoformat(),
+                progress=format_size(self.seen_so_far, binary=True),
                 total=total,
                 percentage=percentage,
             )
@@ -505,7 +511,7 @@ class KiwixStorage:
             on = on.astimezone(datetime.timezone.utc)
         bucket_name = self._bucket_name_param(bucket_name)
         compliance = "<ObjectComplianceConfiguration>\n\t<ConditionalHold>false</ConditionalHold>\n\t<RetentionTime>{retention_time}</RetentionTime>\n</ObjectComplianceConfiguration>".format(
-            retention_time=on.isoformat(timespec="seconds").replace("+00:00", "Z")
+            retention_time=on.isoformat(timespec="seconds").replace("+00:00", "") + "Z"
         )
         return self.set_wasabi_compliance(compliance, key=key, bucket_name=bucket_name)
 
@@ -583,6 +589,19 @@ class KiwixStorage:
             aws_region=region,
             aws_service=service,
         )
+
+    def get_wasabi_compliance(self, key=None, bucket_name=None):
+        """ apply a compliance to a bucket of object """
+        if not self.is_wasabi:
+            raise NotImplementedError("Only Wasabi feature")
+
+        url = f"{self.wasabi_url}/{bucket_name}"
+        if key is not None:
+            url += f"/{key}"
+        url += "?compliance"
+        req = requests.get(url=url, auth=self.aws_auth)
+        req.raise_for_status()
+        return req.text
 
     def set_wasabi_compliance(self, compliance, key=None, bucket_name=None):
         """ apply a compliance to a bucket of object """

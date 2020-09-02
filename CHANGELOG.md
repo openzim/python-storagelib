@@ -1,3 +1,8 @@
+# 0.4
+
+* progress report uses humanfriendly if available
+* added `get_wasabi_compliance()` to retrieve an XML bucket or object compliance
+
 # 0.3
 
 * added `has_object_matching()` to check an object with multiple key/value pairs
