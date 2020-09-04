@@ -27,11 +27,14 @@ import boto3
 import botocore
 import requests
 from aws_requests_auth.aws_auth import AWSRequestsAuth
+
 try:
     from humanfriendly import format_size
 except ImportError:
+
     def format_size(num_bytes, keep_width=False, binary=False):
         return str(num_bytes)
+
 
 logger = logging.getLogger(__name__)
 
@@ -313,15 +316,15 @@ class KiwixStorage:
     def check_credentials(
         self, list_buckets=False, bucket=False, write=None, read=None, failsafe=False
     ):
-        """ ensures your credentials allows some common actions
+        """ensures your credentials allows some common actions
 
-            list_buckets (bool): test for bucket listing access
-            bucket (bool): test for access to bucket
-            bucket (str): test for access to a different bucket (than URL)
-            write (bool): test for write access to bucket
-            write (str) test for write access on a specific key
-            read (bool) test for read access on written object (only if write)
-            read (str): test for read access on specific key """
+        list_buckets (bool): test for bucket listing access
+        bucket (bool): test for access to bucket
+        bucket (str): test for access to a different bucket (than URL)
+        write (bool): test for write access to bucket
+        write (str) test for write access on a specific key
+        read (bool) test for read access on written object (only if write)
+        read (str): test for read access on specific key"""
         if not list_buckets and not bucket and not write and not read:
             raise ValueError("Nothing to test your credentials over.")
         try:
@@ -342,7 +345,8 @@ class KiwixStorage:
 
             if read and (read is not True or not write):
                 self.test_access_read(
-                    key=str(read), bucket_name=bucket_name,
+                    key=str(read),
+                    bucket_name=bucket_name,
                 )
         except (AuthenticationError, self.client.exceptions.NoSuchBucket) as exc:
             if failsafe:
@@ -351,9 +355,9 @@ class KiwixStorage:
         return True
 
     def _bucket_name_param(self, bucket_name=None):
-        """ passed bucket_name if defined else self.bucket_name
+        """passed bucket_name if defined else self.bucket_name
 
-            Used to easily use provided param if present & default to configured one"""
+        Used to easily use provided param if present & default to configured one"""
         if bucket_name is None and not self.bucket_name:
             raise ValueError("No bucket_name supplied (not in params nor url)")
         return self.bucket_name if bucket_name is None else bucket_name
@@ -479,9 +483,9 @@ class KiwixStorage:
         return self.get_object(key, bucket_name).delete(**kwargs)
 
     def allow_public_downloads_on(self, bucket_name=None):
-        """ sets policy on bucket to allow anyone to GET objects (downloads)
+        """sets policy on bucket to allow anyone to GET objects (downloads)
 
-            TODO: add this policy instead of overwriting everything """
+        TODO: add this policy instead of overwriting everything"""
         if not self.is_wasabi:
             raise NotImplementedError("Only Wasabi at the moment.")
 
@@ -501,9 +505,7 @@ class KiwixStorage:
         return self.set_wasabi_compliance(compliance, key=None, bucket_name=bucket_name)
 
     def set_object_autodelete_on(self, key, on, bucket_name=None):
-        """ apply compliance setting RetentionTime
-
-             """
+        """apply compliance setting RetentionTime"""
         if not self.is_wasabi:
             raise NotImplementedError("Only Wasabi at the moment")
 
@@ -516,9 +518,9 @@ class KiwixStorage:
         return self.set_wasabi_compliance(compliance, key=key, bucket_name=bucket_name)
 
     def delete_bucket(self, bucket_name=None, force=False):
-        """ delete a bucket
+        """delete a bucket
 
-            force (bool) only for Wasabi: delete even if there are objects in bucket """
+        force (bool) only for Wasabi: delete even if there are objects in bucket"""
         bucket_name = self._bucket_name_param(bucket_name)
         if not force:
             return self.client.delete_bucket(Bucket=bucket_name)
@@ -547,11 +549,11 @@ class KiwixStorage:
     def rename_objects(
         self, key, new_key, overwrite=False, as_prefix=False, bucket_name=None
     ):
-        """ change key of an object or list of objects
+        """change key of an object or list of objects
 
-            overwrite (bool) whether to overwrite destination
-            as_prefix (bool) rename whole bucket keys starting with `key`
-             and replacing this part with `new_key` """
+        overwrite (bool) whether to overwrite destination
+        as_prefix (bool) rename whole bucket keys starting with `key`
+         and replacing this part with `new_key`"""
         if not self.is_wasabi:
             raise NotImplementedError("Only Wasabi allows objects rename")
 
@@ -579,9 +581,9 @@ class KiwixStorage:
         region="",
         service="s3",
     ):
-        """ prepares AWS Signature v4 headers for requests
+        """prepares AWS Signature v4 headers for requests
 
-            Sets: Authorization, x-amz-date and x-amz-content-sha256 """
+        Sets: Authorization, x-amz-date and x-amz-content-sha256"""
         return AWSRequestsAuth(
             aws_access_key=access_key_id,
             aws_secret_access_key=secret_access_key,
@@ -624,14 +626,14 @@ class KiwixStorage:
         progress_fpath=None,
         **kwargs,
     ):
-        """ parse and mix shortcut args with boto3 ones
+        """parse and mix shortcut args with boto3 ones
 
-            meta (dict): sets Metadata
-            progress (bool): enables default progress report
-            progress (callable): custom progress report hook
-            progress_size: sets size for auto progress reporter
-            progress_fpath: sets fpath for auto progress reporter
-            """
+        meta (dict): sets Metadata
+        progress (bool): enables default progress report
+        progress (callable): custom progress report hook
+        progress_size: sets size for auto progress reporter
+        progress_fpath: sets fpath for auto progress reporter
+        """
         if meta:
             if self.EXTRA_ARGS_KEY not in kwargs:
                 kwargs[self.EXTRA_ARGS_KEY] = {}
@@ -654,11 +656,11 @@ class KiwixStorage:
     def upload_file(
         self, fpath, key, bucket_name=None, meta=None, progress=False, **kwargs
     ):
-        """ upload a file to the bucket
+        """upload a file to the bucket
 
-            meta (dict): metadata for the object
-            progress (bool): enable default progress report
-            progress (callable): your own progress report callback """
+        meta (dict): metadata for the object
+        progress (bool): enable default progress report
+        progress (callable): your own progress report callback"""
         bucket = self.get_bucket(bucket_name) if bucket_name else self.bucket
         kwargs = self._mix_kwargs(
             meta=meta, progress=progress, progress_fpath=fpath, **kwargs
@@ -666,10 +668,10 @@ class KiwixStorage:
         bucket.upload_file(Filename=str(fpath), Key=key, **kwargs)
 
     def download_file(self, key, fpath, bucket_name=None, progress=False, **kwargs):
-        """ download object to fpath using boto3
+        """download object to fpath using boto3
 
-            progress (bool): enable default progress report
-            progress (callable): your own progress report callback """
+        progress (bool): enable default progress report
+        progress (callable): your own progress report callback"""
         bucket_name = self._bucket_name_param(bucket_name)
         size = self.get_object_stat(key, bucket_name).size if progress is True else None
         kwargs = self._mix_kwargs(progress=progress, progress_size=size, **kwargs)
@@ -678,14 +680,14 @@ class KiwixStorage:
         )
 
     def get_download_url(self, key, bucket_name=None, prefer_torrent=True):
-        """ URL of object for external download
+        """URL of object for external download
 
-            torrent is a shortcut for calling {key}.torrent which is the uploader's
-            responsibility to create.
-            if testing this torrent file key results in 404, fallback to {key}.
+        torrent is a shortcut for calling {key}.torrent which is the uploader's
+        responsibility to create.
+        if testing this torrent file key results in 404, fallback to {key}.
 
-            this is not using GetObjectTorrent as it is limited to 5G on AWS
-            and not supported at all on Wasabi. """
+        this is not using GetObjectTorrent as it is limited to 5G on AWS
+        and not supported at all on Wasabi."""
         bucket_name = self._bucket_name_param(bucket_name)
         torrent_key = f"{key}.torrent"
         if prefer_torrent and self.has_object(torrent_key, bucket_name):
@@ -695,9 +697,9 @@ class KiwixStorage:
 
     @classmethod
     def validate_file_etag(cls, fpath: pathlib.Path, etag: str):
-        """ Validates a server ETag matches a local file
+        """Validates a server ETag matches a local file
 
-            Using recipe from https://teppen.io/2018/10/23/aws_s3_verify_etags/ """
+        Using recipe from https://teppen.io/2018/10/23/aws_s3_verify_etags/"""
 
         # pylint: disable=C0321
 
