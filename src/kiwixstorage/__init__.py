@@ -610,6 +610,7 @@ class KiwixStorage:
         if not self.is_wasabi:
             raise NotImplementedError("Only Wasabi feature")
 
+        bucket_name = self._bucket_name_param(bucket_name)
         url = f"{self.wasabi_url}/{bucket_name}"
         if key is not None:
             url += f"/{key}"

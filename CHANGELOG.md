@@ -1,6 +1,7 @@
 # 0.5
 
-* n/a
+* fixed `allow_public_downloads_on()` when not specifying bucket
+* using less-specified boto3 dependency version to prevent urllib dep version clash with requests
 
 # 0.4
 
