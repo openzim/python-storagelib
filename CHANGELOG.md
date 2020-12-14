@@ -1,3 +1,7 @@
+# 0.6.dev0
+
+- n/a
+
 # 0.5
 
 * fixed `allow_public_downloads_on()` when not specifying bucket
