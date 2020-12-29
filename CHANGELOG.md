@@ -1,3 +1,7 @@
+# 0.7.dev0
+
+- n/a
+
 # 0.6
 
 - added `upload_fileobj()` to stream a file-like object to the bucket
