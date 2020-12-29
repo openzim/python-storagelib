@@ -1,4 +1,4 @@
-# 0.6.dev0
+# 0.6
 
 - added `upload_fileobj()` to stream a file-like object to the bucket
 - added `download_fileobj()` to download to a file-like object as well
