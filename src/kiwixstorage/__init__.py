@@ -13,6 +13,7 @@
     Also, non-S3, wasabi-specific features are exposed directly. """
 
 import os
+import io
 import sys
 import uuid
 import json
@@ -52,7 +53,7 @@ class TransferHook:
     ):
         self.size = size
         self.output = output
-        if flush is None and getattr(output, "name") in ("<stdout>", "<stderr>"):
+        if flush is None and output.name in ("<stdout>", "<stderr>"):
             flush = True
         self.flush = bool(flush)
         self.name = name
@@ -668,6 +669,28 @@ class KiwixStorage:
         )
         bucket.upload_file(Filename=str(fpath), Key=key, **kwargs)
 
+    def upload_fileobj(
+        self, fileobj, key, bucket_name=None, meta=None, progress=False, **kwargs
+    ):
+        """upload a fileobj to the bucket
+
+        meta (dict): metadata for the object
+        progress (bool): enable default progress report
+        progress (callable): your own progress report callback"""
+        bucket = self.get_bucket(bucket_name) if bucket_name else self.bucket
+        # fileobj size if possible
+        if fileobj.seekable():
+            curr_pos = fileobj.tell()
+            progress_size = fileobj.seek(0, io.SEEK_END)
+            fileobj.seek(curr_pos, io.SEEK_START)
+        else:
+            progress_size = -1
+
+        kwargs = self._mix_kwargs(
+            meta=meta, progress=progress, progress_size=progress_size, **kwargs
+        )
+        bucket.upload_fileobj(Fileobj=fileobj, Key=key, **kwargs)
+
     def download_file(self, key, fpath, bucket_name=None, progress=False, **kwargs):
         """download object to fpath using boto3
 
@@ -678,6 +701,20 @@ class KiwixStorage:
         kwargs = self._mix_kwargs(progress=progress, progress_size=size, **kwargs)
         self.resource.Bucket(bucket_name).download_file(
             Key=key, Filename=str(fpath), **kwargs
+        )
+
+    def download_fileobj(
+        self, key, fileobj, bucket_name=None, progress=False, **kwargs
+    ):
+        """download object to fileobj using boto3
+
+        progress (bool): enable default progress report
+        progress (callable): your own progress report callback"""
+        bucket_name = self._bucket_name_param(bucket_name)
+        size = self.get_object_stat(key, bucket_name).size if progress is True else None
+        kwargs = self._mix_kwargs(progress=progress, progress_size=size, **kwargs)
+        self.resource.Bucket(bucket_name).download_file(
+            Key=key, Fileobj=fileobj, **kwargs
         )
 
     def get_download_url(self, key, bucket_name=None, prefer_torrent=True):
