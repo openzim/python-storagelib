@@ -713,7 +713,7 @@ class KiwixStorage:
         bucket_name = self._bucket_name_param(bucket_name)
         size = self.get_object_stat(key, bucket_name).size if progress is True else None
         kwargs = self._mix_kwargs(progress=progress, progress_size=size, **kwargs)
-        self.resource.Bucket(bucket_name).download_file(
+        self.resource.Bucket(bucket_name).download_fileobj(
             Key=key, Fileobj=fileobj, **kwargs
         )
 
