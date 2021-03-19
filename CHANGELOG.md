@@ -1,4 +1,4 @@
-# 0.7.dev0
+# 0.7
 
 - fixed `download_fileobj()` (typo)
 
