@@ -682,7 +682,7 @@ class KiwixStorage:
         if fileobj.seekable():
             curr_pos = fileobj.tell()
             progress_size = fileobj.seek(0, io.SEEK_END)
-            fileobj.seek(curr_pos, io.SEEK_START)
+            fileobj.seek(curr_pos, io.SEEK_SET)
         else:
             progress_size = -1
 

@@ -1,6 +1,6 @@
-# 0.8.dev0
+# 0.8
 
-- n/a
+- fixed `upload_fileobj()` (typo)
 
 # 0.7
 
