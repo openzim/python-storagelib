@@ -1,3 +1,8 @@
+# 0.8.1
+
+- Added `download_matching_file()` and `download_matching_fileobj()` to download a key
+  matching metadata in a single request. Comparison is performed after download
+
 # 0.8
 
 - fixed `upload_fileobj()` (typo)

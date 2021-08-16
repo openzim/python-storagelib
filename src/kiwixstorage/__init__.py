@@ -703,6 +703,29 @@ class KiwixStorage:
             Key=key, Filename=str(fpath), **kwargs
         )
 
+    def download_matching_file(self, key, fpath, meta, bucket_name=None):
+        """download object to file, ensuring a match using a single request
+
+        See download_matching_fileobj()"""
+        bucket_name = self._bucket_name_param(bucket_name)
+
+        # fetch whole object, using custom exception on missing
+        try:
+            remote = self.get_object(key, bucket_name).get()
+        except botocore.exceptions.ClientError as exc:
+            if exc.response["Error"]["Code"] == "NoSuchKey":
+                raise NotFoundError(str(exc))
+            raise exc
+
+        # object exists and downloaded successfuly. Ensure metdata matches
+        for mkey, mvalue in meta.items():
+            if mvalue is not None and remote.get("Metadata", {}).get(mkey) != mvalue:
+                raise NotFoundError(f"Object key={key} doesn't match {mkey}={mvalue}")
+
+        with open(fpath, "wb") as fh:
+            for chunk in remote["Body"].iter_chunks():
+                fh.write(chunk)
+
     def download_fileobj(
         self, key, fileobj, bucket_name=None, progress=False, **kwargs
     ):
@@ -716,6 +739,31 @@ class KiwixStorage:
         self.resource.Bucket(bucket_name).download_fileobj(
             Key=key, Fileobj=fileobj, **kwargs
         )
+
+    def download_matching_fileobj(self, key, fileobj, meta, bucket_name=None):
+        """download object to fileobj, ensuring a match using a single request
+
+        Comparison is performed after retrieval of object.
+        Useful to speed-up download on large collection on files for which
+        there is a good chance the metadata is the right one and/or the expected
+        filesize is small."""
+        bucket_name = self._bucket_name_param(bucket_name)
+
+        # fetch whole object, using custom exception on missing
+        try:
+            remote = self.get_object(key, bucket_name).get()
+        except botocore.exceptions.ClientError as exc:
+            if exc.response["Error"]["Code"] == "NoSuchKey":
+                raise NotFoundError(str(exc))
+            raise exc
+
+        # object exists and downloaded successfuly. Ensure metdata matches
+        for mkey, mvalue in meta.items():
+            if mvalue is not None and remote.get("Metadata", {}).get(mkey) != mvalue:
+                raise NotFoundError(f"Object key={key} doesn't match {mkey}={mvalue}")
+
+        for chunk in remote["Body"].iter_chunks():
+            fileobj.write(chunk)
 
     def get_download_url(self, key, bucket_name=None, prefer_torrent=True):
         """URL of object for external download
