@@ -41,7 +41,7 @@ logger = logging.getLogger(__name__)
 
 
 class TransferHook:
-    """ Generic transfer hook based on size """
+    """Generic transfer hook based on size"""
 
     def __init__(
         self,
@@ -82,7 +82,7 @@ class TransferHook:
 
 
 class FileTransferHook(TransferHook):
-    """ Sample progress report hook printing to STDOUT """
+    """Sample progress report hook printing to STDOUT"""
 
     def __init__(
         self,
@@ -106,7 +106,7 @@ class FileTransferHook(TransferHook):
 
 
 class HeadStat:
-    """ easy access to useful object properties """
+    """easy access to useful object properties"""
 
     def __init__(self, data=None):
         self.data = data or {}
@@ -203,12 +203,12 @@ class KiwixStorage:
 
     @property
     def params(self):
-        """ dict of query parameters from URL """
+        """dict of query parameters from URL"""
         return self._params
 
     @property
     def bucket_name(self):
-        """ bucket name set in URL """
+        """bucket name set in URL"""
         return self.params.get(self.BUCKET_NAME)
 
     @property
@@ -221,7 +221,7 @@ class KiwixStorage:
 
     @property
     def region(self):
-        """ region from URL endpoint """
+        """region from URL endpoint"""
         parts = self.url.hostname.split(".", 2)
         if len(parts) < 3:
             return None
@@ -229,12 +229,12 @@ class KiwixStorage:
 
     @property
     def client(self):
-        """ Configured boto3 client """
+        """Configured boto3 client"""
         return self.resource.meta.client
 
     @property
     def aws_auth(self):
-        """ requests-compatible AWS authentication plugin """
+        """requests-compatible AWS authentication plugin"""
         return self.get_aws_auth_for(
             access_key_id=self.params.get(self.KEY_ID),
             secret_access_key=self.params.get(self.SECRET_KEY),
@@ -248,7 +248,7 @@ class KiwixStorage:
         return self._resource
 
     def get_resource(self):
-        """ Configured boto3.resource('s3') """
+        """Configured boto3.resource('s3')"""
         try:
             return boto3.resource(
                 "s3",
@@ -260,12 +260,12 @@ class KiwixStorage:
             raise AuthenticationError(str(exc))
 
     def get_service_endpoint(self, service_name):
-        """ non-s3 service endpoint based on provided URL """
+        """non-s3 service endpoint based on provided URL"""
         domain = self.url.netloc.split(".", 1)[1]
         return f"https://{service_name}.{domain}"
 
     def get_service(self, service_name, use_default_region=True):
-        """ configured generic boto3 service """
+        """configured generic boto3 service"""
         try:
             return boto3.client(
                 service_name,
@@ -377,12 +377,12 @@ class KiwixStorage:
         return [b["Name"] for b in self.client.list_buckets()["Buckets"]]
 
     def bucket_exists(self, bucket_name=None):
-        """ whether bucket exists on server """
+        """whether bucket exists on server"""
         bucket_name = self._bucket_name_param(bucket_name)
         return bucket_name in self.bucket_names
 
     def get_bucket(self, bucket_name=None, must_exists=False):
-        """ s3.Bucket()a from URL or param """
+        """s3.Bucket()a from URL or param"""
         bucket_name = self._bucket_name_param(bucket_name)
 
         if must_exists and not self.bucket_exists(bucket_name):
@@ -435,7 +435,7 @@ class KiwixStorage:
         return meta.get(tag) == value
 
     def has_object_matching(self, key, meta, bucket_name=None):
-        """ check whether we have an object matching all key-value pairs supplied """
+        """check whether we have an object matching all key-value pairs supplied"""
         bucket_name = self._bucket_name_param(bucket_name)
         try:
             (remote,) = self.get_object_head(key, bucket_name, only=[self.META_KEY])
@@ -473,7 +473,7 @@ class KiwixStorage:
         return self.get_object_stat(key, bucket_name).etag
 
     def put_text_object(self, key, content, bucket_name=None, **kwargs):
-        """ records a simple text file """
+        """records a simple text file"""
         bucket_name = self._bucket_name_param(bucket_name)
         self.client.put_object(
             Bucket=bucket_name, Key=key, Body=content.encode("UTF-8"), **kwargs
@@ -481,7 +481,7 @@ class KiwixStorage:
 
     def delete_object(self, key, bucket_name=None, **kwargs):
         bucket_name = self._bucket_name_param(bucket_name)
-        return self.get_object(key, bucket_name).delete(**kwargs)
+        return self.get_object(key=key, bucket=bucket_name).delete(**kwargs)
 
     def allow_public_downloads_on(self, bucket_name=None):
         """sets policy on bucket to allow anyone to GET objects (downloads)
@@ -495,7 +495,7 @@ class KiwixStorage:
         self.get_bucket(bucket_name).Policy().put(Policy=policy)
 
     def set_bucket_autodelete_after(self, nb_days, bucket_name=None):
-        """ apply compliance setting RetentionDays and DeleteAfterRetention """
+        """apply compliance setting RetentionDays and DeleteAfterRetention"""
         if not self.is_wasabi:
             raise NotImplementedError("Only Wasabi at the moment")
 
@@ -535,7 +535,7 @@ class KiwixStorage:
         return req
 
     def rename_bucket(self, new_bucket_name, bucket_name=None):
-        """ change name or a bucket """
+        """change name or a bucket"""
         if not self.is_wasabi:
             raise NotImplementedError("Only Wasabi allows bucket rename")
 
@@ -594,7 +594,7 @@ class KiwixStorage:
         )
 
     def get_wasabi_compliance(self, key=None, bucket_name=None):
-        """ apply a compliance to a bucket of object """
+        """apply a compliance to a bucket of object"""
         if not self.is_wasabi:
             raise NotImplementedError("Only Wasabi feature")
 
@@ -607,7 +607,7 @@ class KiwixStorage:
         return req.text
 
     def set_wasabi_compliance(self, compliance, key=None, bucket_name=None):
-        """ apply a compliance to a bucket of object """
+        """apply a compliance to a bucket of object"""
         if not self.is_wasabi:
             raise NotImplementedError("Only Wasabi feature")
 
