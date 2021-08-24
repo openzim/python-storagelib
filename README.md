@@ -1,7 +1,7 @@
 kiwixstorage
 ============
 
-[![CodeFactor](https://www.codefactor.io/repository/github/kiwix/python_storagelib/badge)](https://www.codefactor.io/repository/github/kiwix/python_storagelib)
+[![CodeFactor](https://www.codefactor.io/repository/github/openzim/python_storagelib/badge)](https://www.codefactor.io/repository/github/openzim/python_storagelib)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![PyPI version shields.io](https://img.shields.io/pypi/v/kiwixstorage)](https://pypi.org/project/kiwixstorage/)
 
