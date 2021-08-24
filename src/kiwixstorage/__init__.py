@@ -446,8 +446,8 @@ class KiwixStorage:
             if error_code == 404:
                 return False
 
-        for key, value in meta.items():
-            if value is not None and remote.get(key) != value:
+        for mkey, mvalue in meta.items():
+            if mvalue is not None and remote.get(mkey) != mvalue:
                 return False
         return True
 
