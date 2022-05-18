@@ -481,7 +481,7 @@ class KiwixStorage:
 
     def delete_object(self, key, bucket_name=None, **kwargs):
         bucket_name = self._bucket_name_param(bucket_name)
-        return self.get_object(key=key, bucket=bucket_name).delete(**kwargs)
+        return self.get_object(key=key, bucket_name=bucket_name).delete(**kwargs)
 
     def allow_public_downloads_on(self, bucket_name=None):
         """sets policy on bucket to allow anyone to GET objects (downloads)

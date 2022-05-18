@@ -1,36 +1,51 @@
-# 0.8.1
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html), 
+as of 0.8.2
+
+## [0.8.2]
+
+### Changed
+
+- Fixed `delete_object()` which contained a typo.
+
+
+## [0.8.1]
 
 - Added `download_matching_file()` and `download_matching_fileobj()` to download a key
   matching metadata in a single request. Comparison is performed after download
 
-# 0.8
+## [0.8]
 
 - fixed `upload_fileobj()` (typo)
 
-# 0.7
+## [0.7]
 
 - fixed `download_fileobj()` (typo)
 
-# 0.6
+## [0.6]
 
 - added `upload_fileobj()` to stream a file-like object to the bucket
 - added `download_fileobj()` to download to a file-like object as well
 
-# 0.5
+## [0.5]
 
 * fixed `allow_public_downloads_on()` when not specifying bucket
 * using less-specified boto3 dependency version to prevent urllib dep version clash with requests
 
-# 0.4
+## [0.4]
 
 * progress report uses humanfriendly if available
 * added `get_wasabi_compliance()` to retrieve an XML bucket or object compliance
 
-# 0.3
+## [0.3]
 
 * added `has_object_matching()` to check an object with multiple key/value pairs
 
-# 0.2
+## [0.2]
 
 * more flexible requirements for requests
 * removed some debug prints
@@ -38,7 +53,7 @@
 * added `s3_test_url` script to test an URL
 * added `delete_object()` shortcut
 
-# 0.1
+## [0.1]
 
 * Initial version featuring:
  * URL parsing
