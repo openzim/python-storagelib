@@ -34,9 +34,11 @@ try:
 except ImportError:
 
     def format_size(num_bytes, keep_width=False, binary=False):
-        return str(num_bytes)
+        return f"{num_bytes} bytes"
 
 
+with open(pathlib.Path(__file__).parent / "VERSION", "r") as fh:
+    __version__ = fh.read().strip()
 logger = logging.getLogger(__name__)
 
 
@@ -815,7 +817,7 @@ class KiwixStorage:
         def md5sum(fpath):
             digest = hashlib.md5()  # nosec
             with open(fpath, "rb") as fh:
-                for chunk in iter(lambda: fh.read(2 ** 20 * 8), b""):
+                for chunk in iter(lambda: fh.read(2**20 * 8), b""):
                     digest.update(chunk)
             return digest.hexdigest()
 

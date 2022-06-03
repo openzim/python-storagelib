@@ -6,7 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html), 
 as of 0.8.2
 
-## [0.8.2]
+## [0.8.3] - 2022-06-03
+
+### Added
+
+- `s3upload` script to upload single file using `S3URL` environment variable
+- `kiwixstorage.__version__` now available as well
+
+### Changed
+
+- Default progress output when humanfriendly is not present now adds “ bytes” suffix.
+
+## [0.8.2] - 2022-05-18
 
 ### Changed
 
