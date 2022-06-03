@@ -35,7 +35,10 @@ setup(
     zip_safe=False,
     include_package_data=True,
     entry_points={
-        "console_scripts": ["s3_test_url=kiwixstorage.test_credentials:test_url"]
+        "console_scripts": [
+            "s3_test_url=kiwixstorage.test_credentials:test_url",
+            "s3upload=kiwixstorage.upload:upload_file",
+        ]
     },
     classifiers=[
         "Development Status :: 4 - Beta",
