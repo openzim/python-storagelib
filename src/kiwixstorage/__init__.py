@@ -381,7 +381,9 @@ class KiwixStorage:
 
             if delete:
                 self.test_access_delete(key=write_key, bucket_name=bucket_name)
-        except (AuthenticationError, self.client.exceptions.NoSuchBucket) as exc:
+        except Exception as exc:
+            logger.error(f"credentials check raised an exception: {exc}")
+            logger.exception(exc)
             if failsafe:
                 return False
             raise exc

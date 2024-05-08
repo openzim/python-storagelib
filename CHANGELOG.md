@@ -16,6 +16,7 @@ as of 0.8.2
 
 - testing write access requires delete permission (#11)
 - Incorrectly returning True on non 401/404 exceptions on some key-related tests (#5)
+- check_credentials now safe from exception when using `failsafe=True` (#1)
 
 ## [0.8.3] - 2022-06-03
 
