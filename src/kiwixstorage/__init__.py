@@ -439,6 +439,7 @@ class KiwixStorage:
                 raise AuthenticationError(f"Authorization Error testing key={key}")
             if error_code == 404:
                 return False
+            raise exc
         return True
 
     def has_object_matching_etag(self, key, etag, bucket_name=None):
@@ -451,6 +452,7 @@ class KiwixStorage:
                 raise AuthenticationError(f"Authorization Error testing key={key}")
             if error_code == 404:
                 return False
+            raise exc
         return etag == s3_etag
 
     def has_object_matching_meta(self, key, tag, value, bucket_name=None):
@@ -463,6 +465,7 @@ class KiwixStorage:
                 raise AuthenticationError(f"Authorization Error testing key={key}")
             if error_code == 404:
                 return False
+            raise exc
 
         return meta.get(tag) == value
 
@@ -477,6 +480,7 @@ class KiwixStorage:
                 raise AuthenticationError(f"Authorization Error testing key={key}")
             if error_code == 404:
                 return False
+            raise exc
 
         for mkey, mvalue in meta.items():
             if mvalue is not None and remote.get(mkey) != mvalue:
