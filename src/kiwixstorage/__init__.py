@@ -274,9 +274,11 @@ class KiwixStorage:
                 aws_access_key_id=self.params.get(self.KEY_ID),
                 aws_secret_access_key=self.params.get(self.SECRET_KEY),
                 endpoint_url=self.get_service_endpoint("iam"),
-                region_name="us-east-1"
-                if self.is_wasabi and use_default_region
-                else self.region,
+                region_name=(
+                    "us-east-1"
+                    if self.is_wasabi and use_default_region
+                    else self.region
+                ),
             )
         except Exception as exc:
             raise AuthenticationError(str(exc))
@@ -295,8 +297,10 @@ class KiwixStorage:
         bucket_name = self._bucket_name_param(bucket_name)
         if not bucket_name:
             raise ValueError("Can't test for write without a bucket name")
+
         if key is None:
-            key = f"{uuid.uuid4().hex}/{uuid.uuid4().hex}"
+            key = f".tests_access_write/{uuid.uuid4().hex}"
+
         self.put_text_object(key, key, bucket_name=bucket_name)
 
         try:
@@ -304,8 +308,24 @@ class KiwixStorage:
                 self.test_access_read(key, bucket_name)
         except Exception as exc:
             raise exc
-        finally:
+
+        return key
+
+    def test_access_delete(self, key=None, bucket_name=None):
+        bucket_name = self._bucket_name_param(bucket_name)
+        if not bucket_name:
+            raise ValueError("Can't test for delete without a bucket name")
+
+        if key is None:
+            key = f".tests_access_delete/{uuid.uuid4().hex}"
+            self.put_text_object(key, key, bucket_name=bucket_name)
+
+        try:
             self.client.delete_object(Bucket=self.bucket_name, Key=key)
+        except Exception as exc:
+            raise exc
+
+        return key
 
     def test_access_read(self, key, bucket_name=None):
         bucket_name = self._bucket_name_param(bucket_name)
@@ -317,7 +337,13 @@ class KiwixStorage:
             raise ValueError(f"Can't test read with missing key: {key}")
 
     def check_credentials(
-        self, list_buckets=False, bucket=False, write=None, read=None, failsafe=False
+        self,
+        list_buckets=False,
+        bucket=False,
+        write=None,
+        delete=None,
+        read=None,
+        failsafe=False,
     ):
         """ensures your credentials allows some common actions
 
@@ -339,9 +365,10 @@ class KiwixStorage:
             if bucket:
                 self.test_access_bucket(bucket_name=bucket_name)
 
+            write_key = write if isinstance(write, str) else None
             if write:
-                self.test_access_write(
-                    key=write if isinstance(write, str) else None,
+                write_key = self.test_access_write(
+                    key=write_key,
                     bucket_name=bucket_name,
                     check_read=read is True,
                 )
@@ -351,6 +378,9 @@ class KiwixStorage:
                     key=str(read),
                     bucket_name=bucket_name,
                 )
+
+            if delete:
+                self.test_access_delete(key=write_key, bucket_name=bucket_name)
         except (AuthenticationError, self.client.exceptions.NoSuchBucket) as exc:
             if failsafe:
                 return False
