@@ -191,6 +191,9 @@ class KiwixStorage:
     def _parse_url(self, url, **kwargs):
         try:
             self.url = urllib.parse.urlparse(url)
+            for part in ("scheme", "netloc"):
+                if not getattr(self.url, part):
+                    raise ValueError(f"Incorrect URL: missing {part}")
             env = {
                 k.lower(): v for k, v in urllib.parse.parse_qs(self.url.query).items()
             }

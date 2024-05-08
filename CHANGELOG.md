@@ -12,6 +12,10 @@ as of 0.8.2
 
 - Ability to test delete access via check_credentials or standalone
 
+### Changed
+
+- Malformed URL raises on init
+
 ### Fixed
 
 - testing write access requires delete permission (#11)
