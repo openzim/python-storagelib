@@ -57,7 +57,7 @@ def do_upload_file(url: str, fpath: pathlib.Path, key: str = None):
 
     if s3.has_object(key):
         raise ValueError(f"Key `{key}` already exists at {dest}. Specify another one.")
-    print(f"Uploading {fpath.name} ({format_size(fsize)}) to {dest}/{key}")
+    print(f"Uploading {fpath.name} ({format_size(fsize)}) to {dest}/{key}", flush=True)
 
     progress = CustomProgressBar(fsize).callback if progressbar else True
     s3.upload_file(fpath=fpath, key=key, progress=progress)
