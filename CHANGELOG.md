@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html), 
 as of 0.8.2
 
-## [Unreleased]
+## [0.9.0]
 
 ### Added
 
@@ -21,6 +21,7 @@ as of 0.8.2
 - testing write access requires delete permission (#11)
 - Incorrectly returning True on non 401/404 exceptions on some key-related tests (#5)
 - check_credentials now safe from exception when using `failsafe=True` (#1)
+- Requiring python3.8+ (was already not working with 3.6 and 3.7 due to f-string)
 
 ## [0.8.3] - 2022-06-03
 
