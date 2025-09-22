@@ -3,8 +3,14 @@
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html), 
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html),
 as of 0.8.2
+
+## [Unreleased]
+
+### Added
+
+- configure resources with user-specified timeouts
 
 ## [0.9.0]
 
@@ -40,7 +46,6 @@ as of 0.8.2
 
 - Fixed `delete_object()` which contained a typo.
 
-
 ## [0.8.1]
 
 - Added `download_matching_file()` and `download_matching_fileobj()` to download a key
@@ -61,54 +66,53 @@ as of 0.8.2
 
 ## [0.5]
 
-* fixed `allow_public_downloads_on()` when not specifying bucket
-* using less-specified boto3 dependency version to prevent urllib dep version clash with requests
+- fixed `allow_public_downloads_on()` when not specifying bucket
+- using less-specified boto3 dependency version to prevent urllib dep version clash with requests
 
 ## [0.4]
 
-* progress report uses humanfriendly if available
-* added `get_wasabi_compliance()` to retrieve an XML bucket or object compliance
+- progress report uses humanfriendly if available
+- added `get_wasabi_compliance()` to retrieve an XML bucket or object compliance
 
 ## [0.3]
 
-* added `has_object_matching()` to check an object with multiple key/value pairs
+- added `has_object_matching()` to check an object with multiple key/value pairs
 
 ## [0.2]
 
-* more flexible requirements for requests
-* removed some debug prints
-* don't fail if `AWS_PROFILE` environ is present
-* added `s3_test_url` script to test an URL
-* added `delete_object()` shortcut
+- more flexible requirements for requests
+- removed some debug prints
+- don't fail if `AWS_PROFILE` environ is present
+- added `s3_test_url` script to test an URL
+- added `delete_object()` shortcut
 
 ## [0.1]
 
-* Initial version featuring:
- * URL parsing
- * Visual transfer progress hook
- * wasabi detection
- * configured S3 resource (`.resource`)
- * configured S3 client (`.client`)
- * requests auth module (`.aws_auth`)
- * credentials check (list bucket, read, write)
- * configured generic service (`iam` for ex.)
- * direct bucket names
- * direct bucket access
- * test bucket existence
- * bucket creation
- * test object exitence
- * direct object head access
- * direct object stats access
- * test object with etag exitence
- * test object with meta existence
- * set policy on bucket (allow external downloads)
- * set wasabi auto delete on bucket (retention)
- * set wasabi auto delete on object (retention extension)
- * delete bucket (with wasabi force)
- * wasabi rename bucket
- * wasabi object rename (with prefix)
- * set wasabi compliance
- * direct object download
- * object download url
- * validate file etag (mono and multipart)
-
+- Initial version featuring:
+- URL parsing
+- Visual transfer progress hook
+- wasabi detection
+- configured S3 resource (`.resource`)
+- configured S3 client (`.client`)
+- requests auth module (`.aws_auth`)
+- credentials check (list bucket, read, write)
+- configured generic service (`iam` for ex.)
+- direct bucket names
+- direct bucket access
+- test bucket existence
+- bucket creation
+- test object exitence
+- direct object head access
+- direct object stats access
+- test object with etag exitence
+- test object with meta existence
+- set policy on bucket (allow external downloads)
+- set wasabi auto delete on bucket (retention)
+- set wasabi auto delete on object (retention extension)
+- delete bucket (with wasabi force)
+- wasabi rename bucket
+- wasabi object rename (with prefix)
+- set wasabi compliance
+- direct object download
+- object download url
+- validate file etag (mono and multipart)

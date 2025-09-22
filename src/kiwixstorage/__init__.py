@@ -2,15 +2,15 @@
 # -*- coding: utf-8 -*-
 # vim: ai ts=4 sts=4 et sw=4 nu
 
-""" Kiwix/OpenZIM S3 interface
+"""Kiwix/OpenZIM S3 interface
 
-    helpers for S3 storage, autoconf from URL + Wasabi (wasabisys.com) extras
+helpers for S3 storage, autoconf from URL + Wasabi (wasabisys.com) extras
 
-    Goal is mainly to provide a configured s3.client and s3.resource from an URL
-    Users could limit usage to this and use boto3 directly from there.
+Goal is mainly to provide a configured s3.client and s3.resource from an URL
+Users could limit usage to this and use boto3 directly from there.
 
-    A few additional wrappers are in place to simplify common actions.
-    Also, non-S3, wasabi-specific features are exposed directly. """
+A few additional wrappers are in place to simplify common actions.
+Also, non-S3, wasabi-specific features are exposed directly."""
 
 import os
 import io
@@ -26,6 +26,7 @@ import threading
 
 import boto3
 import botocore
+from botocore.config import Config
 import requests
 from aws_requests_auth.aws_auth import AWSRequestsAuth
 
@@ -155,7 +156,6 @@ class NotFoundError(Exception):
 
 
 class KiwixStorage:
-
     BUCKET_NAME = "bucketname"
     KEY_ID = "keyid"
     SECRET_KEY = "secretaccesskey"  # nosec
@@ -187,6 +187,12 @@ class KiwixStorage:
         self._resource = self._bucket = None
         self._params = {}
         self._parse_url(url, **kwargs)
+        # set configuration params with defaults being the same as if it were missing
+        # https://botocore.amazonaws.com/v1/documentation/api/latest/reference/config.html
+        self._config = Config(
+            connect_timeout=kwargs.get("connect_timeout", 60),
+            read_timeout=kwargs.get("read_timeout", 60),
+        )
 
     def _parse_url(self, url, **kwargs):
         try:
@@ -260,6 +266,7 @@ class KiwixStorage:
                 aws_access_key_id=self.params.get(self.KEY_ID),
                 aws_secret_access_key=self.params.get(self.SECRET_KEY),
                 endpoint_url=self.params.get(self.ENDPOINT_URL),
+                config=self._config,
             )
         except Exception as exc:
             raise AuthenticationError(str(exc))
@@ -282,6 +289,7 @@ class KiwixStorage:
                     if self.is_wasabi and use_default_region
                     else self.region
                 ),
+                config=self._config,
             )
         except Exception as exc:
             raise AuthenticationError(str(exc))
