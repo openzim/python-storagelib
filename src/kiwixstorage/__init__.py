@@ -1,7 +1,3 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-# vim: ai ts=4 sts=4 et sw=4 nu
-
 """Kiwix/OpenZIM S3 interface
 
 helpers for S3 storage, autoconf from URL + Wasabi (wasabisys.com) extras
@@ -12,35 +8,36 @@ Users could limit usage to this and use boto3 directly from there.
 A few additional wrappers are in place to simplify common actions.
 Also, non-S3, wasabi-specific features are exposed directly."""
 
-import os
-import io
-import sys
-import uuid
-import json
-import urllib
-import pathlib
-import hashlib
-import logging
 import datetime
+import hashlib
+import io
+import json
+import logging
+import os
+import pathlib
+import sys
 import threading
+import urllib.parse
+import uuid
+from collections.abc import Callable
+from http import HTTPStatus
+from typing import Any, Literal, TextIO
 
 import boto3
 import botocore
-from botocore.config import Config
 import requests
 from aws_requests_auth.aws_auth import AWSRequestsAuth
+from botocore.config import Config
+from humanfriendly import format_size, parse_timespan
 
-try:
-    from humanfriendly import format_size
-except ImportError:
-
-    def format_size(num_bytes, keep_width=False, binary=False):
-        return f"{num_bytes} bytes"
-
-
-with open(pathlib.Path(__file__).parent / "VERSION", "r") as fh:
-    __version__ = fh.read().strip()
 logger = logging.getLogger(__name__)
+
+REQUESTS_TIMEOUT = parse_timespan(os.getenv("REQUESTS_TIMEOUT_DURATION", default="30s"))
+
+
+def getnow():
+    """naive UTC now"""
+    return datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
 
 
 class TransferHook:
@@ -48,11 +45,11 @@ class TransferHook:
 
     def __init__(
         self,
-        size=-1,
-        output=sys.stdout,
-        flush=None,
-        name="",
-        fmt="\r{progress} / {total} ({percentage:.2f}%)",
+        size: int = -1,
+        output: TextIO = sys.stdout,
+        flush: bool | None = None,
+        name: str = "",
+        fmt: str = "\r{progress} / {total} ({percentage:.2f}%)",
     ):
         self.size = size
         self.output = output
@@ -63,7 +60,7 @@ class TransferHook:
         self.fmt = fmt
         self.seen_so_far = 0
 
-    def __call__(self, bytes_amount):
+    def __call__(self, bytes_amount: int):
         self.seen_so_far += bytes_amount
         if self.size > 0:
             total = format_size(self.size, binary=True)
@@ -74,7 +71,7 @@ class TransferHook:
         self.output.write(
             self.fmt.format(
                 name=self.name,
-                on=datetime.datetime.now().isoformat(),
+                on=getnow().isoformat(),
                 progress=format_size(self.seen_so_far, binary=True),
                 total=total,
                 percentage=percentage,
@@ -89,13 +86,13 @@ class FileTransferHook(TransferHook):
 
     def __init__(
         self,
-        filename,
-        output=sys.stdout,
-        flush=None,
-        fmt="\r{name} {progress} / {total} ({percentage:.2f}%)",
+        filename: str | pathlib.Path,
+        output: TextIO = sys.stdout,
+        flush: bool | None = None,
+        fmt: str = "\r{name} {progress} / {total} ({percentage:.2f}%)",
     ):
         super().__init__(
-            size=float(pathlib.Path(filename).stat().st_size),
+            size=pathlib.Path(filename).stat().st_size,
             output=output,
             flush=flush,
             fmt=fmt,
@@ -103,7 +100,7 @@ class FileTransferHook(TransferHook):
         self.name = filename
         self.lock = threading.Lock()
 
-    def __call__(self, bytes_amount):
+    def __call__(self, bytes_amount: int):
         with self.lock:
             super().__call__(bytes_amount)
 
@@ -111,7 +108,7 @@ class FileTransferHook(TransferHook):
 class HeadStat:
     """easy access to useful object properties"""
 
-    def __init__(self, data=None):
+    def __init__(self, data: dict[str, Any] | None = None):
         self.data = data or {}
 
     def __repr__(self):
@@ -180,12 +177,13 @@ class KiwixStorage:
 }
 """
 
-    def __init__(self, url, **kwargs):
+    def __init__(self, url: str, **kwargs: Any):
         if os.getenv("AWS_PROFILE"):
             logger.warning("removing `AWS_PROFILE` variable from environment")
             del os.environ["AWS_PROFILE"]
         self._resource = self._bucket = None
-        self._params = {}
+        self._params: dict[str, Any] = {}
+        self._url: urllib.parse.ParseResult | None = None
         self._parse_url(url, **kwargs)
         # set configuration params with defaults being the same as if it were missing
         # https://botocore.amazonaws.com/v1/documentation/api/latest/reference/config.html
@@ -194,13 +192,14 @@ class KiwixStorage:
             read_timeout=kwargs.get("read_timeout", 60),
         )
 
-    def _parse_url(self, url, **kwargs):
+    def _parse_url(self, url: str, **kwargs: Any):
         try:
             self.url = urllib.parse.urlparse(url)
             for part in ("scheme", "netloc"):
                 if not getattr(self.url, part):
                     raise ValueError(f"Incorrect URL: missing {part}")
-            env = {
+
+            env: dict[str, Any] = {
                 k.lower(): v for k, v in urllib.parse.parse_qs(self.url.query).items()
             }
 
@@ -208,7 +207,8 @@ class KiwixStorage:
             for key in (self.KEY_ID, self.SECRET_KEY, self.BUCKET_NAME):
                 env[key] = env.get(key, [None])[-1]
         except Exception as exc:
-            raise ValueError(f"Incorrect URL: {exc}")
+            raise ValueError(f"Incorrect URL: {exc}") from exc
+
         self._params.update(env)
         self._params.update(kwargs)
 
@@ -218,13 +218,13 @@ class KiwixStorage:
         return self._params
 
     @property
-    def bucket_name(self):
+    def bucket_name(self) -> str:
         """bucket name set in URL"""
-        return self.params.get(self.BUCKET_NAME)
+        return self.params.get(self.BUCKET_NAME, "")
 
     @property
     def is_wasabi(self):
-        return self.url.hostname.endswith("wasabisys.com")
+        return bool(self.url.hostname and self.url.hostname.endswith("wasabisys.com"))
 
     @property
     def wasabi_url(self):
@@ -233,8 +233,10 @@ class KiwixStorage:
     @property
     def region(self):
         """region from URL endpoint"""
-        parts = self.url.hostname.split(".", 2)
-        if len(parts) < 3:
+        parts = self.url.hostname.split(  # pyright: ignore[reportOptionalMemberAccess]
+            ".", 2
+        )
+        if len(parts) < 3:  # noqa: PLR2004
             return None
         return parts[1]
 
@@ -247,8 +249,8 @@ class KiwixStorage:
     def aws_auth(self):
         """requests-compatible AWS authentication plugin"""
         return self.get_aws_auth_for(
-            access_key_id=self.params.get(self.KEY_ID),
-            secret_access_key=self.params.get(self.SECRET_KEY),
+            access_key_id=self.params.get(self.KEY_ID, ""),
+            secret_access_key=self.params.get(self.SECRET_KEY, ""),
             host=self.url.netloc,
         )
 
@@ -261,25 +263,25 @@ class KiwixStorage:
     def get_resource(self):
         """Configured boto3.resource('s3')"""
         try:
-            return boto3.resource(
+            return boto3.resource(  # pyright: ignore
                 "s3",
-                aws_access_key_id=self.params.get(self.KEY_ID),
-                aws_secret_access_key=self.params.get(self.SECRET_KEY),
-                endpoint_url=self.params.get(self.ENDPOINT_URL),
+                aws_access_key_id=self.params.get(self.KEY_ID, ""),
+                aws_secret_access_key=self.params.get(self.SECRET_KEY, ""),
+                endpoint_url=self.params.get(self.ENDPOINT_URL, ""),
                 config=self._config,
             )
         except Exception as exc:
-            raise AuthenticationError(str(exc))
+            raise AuthenticationError(str(exc)) from exc
 
-    def get_service_endpoint(self, service_name):
+    def get_service_endpoint(self, service_name: str):
         """non-s3 service endpoint based on provided URL"""
         domain = self.url.netloc.split(".", 1)[1]
         return f"https://{service_name}.{domain}"
 
-    def get_service(self, service_name, use_default_region=True):
+    def get_service(self, service_name: Literal["s3"], use_default_region: bool = True):
         """configured generic boto3 service"""
         try:
-            return boto3.client(
+            return boto3.client(  # pyright: ignore
                 service_name,
                 aws_access_key_id=self.params.get(self.KEY_ID),
                 aws_secret_access_key=self.params.get(self.SECRET_KEY),
@@ -292,19 +294,26 @@ class KiwixStorage:
                 config=self._config,
             )
         except Exception as exc:
-            raise AuthenticationError(str(exc))
+            raise AuthenticationError(str(exc)) from exc
 
     def test_access_list_buckets(self):
         self.client.list_buckets()
 
-    def test_access_bucket(self, bucket_name=None):
+    def test_access_bucket(self, bucket_name: str | None = None):
         bucket_name = self._bucket_name_param(bucket_name)
         if not bucket_name:
             raise ValueError("Can't test for bucket without a bucket name")
-        if self.get_bucket(bucket_name).creation_date is None:
+        if (
+            self.get_bucket(bucket_name).creation_date is None
+        ):  # pyright: ignore[reportUnnecessaryComparison]
             raise AuthenticationError("Bucket doesn't exist of not reachable")
 
-    def test_access_write(self, key=None, bucket_name=None, check_read=False):
+    def test_access_write(
+        self,
+        key: str | None = None,
+        bucket_name: str | None = None,
+        check_read: bool = False,
+    ):
         bucket_name = self._bucket_name_param(bucket_name)
         if not bucket_name:
             raise ValueError("Can't test for write without a bucket name")
@@ -322,7 +331,9 @@ class KiwixStorage:
 
         return key
 
-    def test_access_delete(self, key=None, bucket_name=None):
+    def test_access_delete(
+        self, key: str | None = None, bucket_name: str | None = None
+    ):
         bucket_name = self._bucket_name_param(bucket_name)
         if not bucket_name:
             raise ValueError("Can't test for delete without a bucket name")
@@ -338,7 +349,7 @@ class KiwixStorage:
 
         return key
 
-    def test_access_read(self, key, bucket_name=None):
+    def test_access_read(self, key: str, bucket_name: str | None = None):
         bucket_name = self._bucket_name_param(bucket_name)
         if not bucket_name:
             raise ValueError("Can't test for read without a bucket name")
@@ -349,12 +360,12 @@ class KiwixStorage:
 
     def check_credentials(
         self,
-        list_buckets=False,
-        bucket=False,
-        write=None,
-        delete=None,
-        read=None,
-        failsafe=False,
+        list_buckets: bool = False,
+        bucket: str | bool = False,
+        write: bool | str | None = None,
+        delete: bool | str | None = None,
+        read: bool | str | None = None,
+        failsafe: bool = False,
     ):
         """ensures your credentials allows some common actions
 
@@ -400,7 +411,7 @@ class KiwixStorage:
             raise exc
         return True
 
-    def _bucket_name_param(self, bucket_name=None):
+    def _bucket_name_param(self, bucket_name: str | None = None):
         """passed bucket_name if defined else self.bucket_name
 
         Used to easily use provided param if present & default to configured one"""
@@ -411,7 +422,7 @@ class KiwixStorage:
     @property
     def bucket(self):
         if not self.bucket_name:
-            return NotFoundError("No bucket specified")
+            raise NotFoundError("No bucket specified")
 
         if self._bucket is None:
             self._bucket = self.get_bucket()
@@ -419,14 +430,17 @@ class KiwixStorage:
 
     @property
     def bucket_names(self):
-        return [b["Name"] for b in self.client.list_buckets()["Buckets"]]
+        return [
+            b["Name"]  # pyright: ignore[reportTypedDictNotRequiredAccess]
+            for b in self.client.list_buckets()["Buckets"]
+        ]
 
-    def bucket_exists(self, bucket_name=None):
+    def bucket_exists(self, bucket_name: str | None = None):
         """whether bucket exists on server"""
         bucket_name = self._bucket_name_param(bucket_name)
         return bucket_name in self.bucket_names
 
-    def get_bucket(self, bucket_name=None, must_exists=False):
+    def get_bucket(self, bucket_name: str | None = None, must_exists: bool = False):
         """s3.Bucket()a from URL or param"""
         bucket_name = self._bucket_name_param(bucket_name)
 
@@ -435,63 +449,77 @@ class KiwixStorage:
 
         return self.resource.Bucket(bucket_name)
 
-    def create_bucket(self, bucket_name, **kwargs):
+    def create_bucket(self, bucket_name: str, **kwargs: Any):
         bucket_name = self._bucket_name_param(bucket_name)
         if self.bucket_exists(bucket_name):
             raise ValueError(f"Bucket {bucket_name} already exists.")
 
         return self.client.create_bucket(Bucket=bucket_name, **kwargs)
 
-    def has_object(self, key, bucket_name=None):
+    def has_object(self, key: str, bucket_name: str | None = None):
         bucket_name = self._bucket_name_param(bucket_name)
         try:
             self.get_object_head(key, bucket_name)
-        except botocore.exceptions.ClientError as exc:
-            error_code = int(exc.response["Error"]["Code"])
-            if error_code == 403:
-                raise AuthenticationError(f"Authorization Error testing key={key}")
-            if error_code == 404:
+        except botocore.exceptions.ClientError as exc:  # pyright: ignore
+            error_code = int(exc.response["Error"]["Code"])  # pyright: ignore
+            if error_code == HTTPStatus.FORBIDDEN:
+                raise AuthenticationError(
+                    f"Authorization Error testing key={key}"
+                ) from exc
+            if error_code == HTTPStatus.NOT_FOUND:
                 return False
             raise exc
         return True
 
-    def has_object_matching_etag(self, key, etag, bucket_name=None):
+    def has_object_matching_etag(
+        self, key: str, etag: str, bucket_name: str | None = None
+    ):
         bucket_name = self._bucket_name_param(bucket_name)
         try:
             s3_etag = self.get_object_etag(key, bucket_name)
-        except botocore.exceptions.ClientError as exc:
-            error_code = int(exc.response["Error"]["Code"])
-            if error_code == 403:
-                raise AuthenticationError(f"Authorization Error testing key={key}")
-            if error_code == 404:
+        except botocore.exceptions.ClientError as exc:  # pyright: ignore
+            error_code = int(exc.response["Error"]["Code"])  # pyright: ignore
+            if error_code == HTTPStatus.FORBIDDEN:
+                raise AuthenticationError(
+                    f"Authorization Error testing key={key}"
+                ) from exc  # pyright: ignore
+            if error_code == HTTPStatus.NOT_FOUND:
                 return False
             raise exc
         return etag == s3_etag
 
-    def has_object_matching_meta(self, key, tag, value, bucket_name=None):
+    def has_object_matching_meta(
+        self, key: str, tag: str, value: str, bucket_name: str | None = None
+    ):
         bucket_name = self._bucket_name_param(bucket_name)
         try:
             (meta,) = self.get_object_head(key, bucket_name, only=[self.META_KEY])
-        except botocore.exceptions.ClientError as exc:
-            error_code = int(exc.response["Error"]["Code"])
-            if error_code == 403:
-                raise AuthenticationError(f"Authorization Error testing key={key}")
-            if error_code == 404:
+        except botocore.exceptions.ClientError as exc:  # pyright: ignore
+            error_code = int(exc.response["Error"]["Code"])  # pyright: ignore
+            if error_code == HTTPStatus.FORBIDDEN:
+                raise AuthenticationError(
+                    f"Authorization Error testing key={key}"
+                ) from exc  # pyright: ignore
+            if error_code == HTTPStatus.NOT_FOUND:
                 return False
             raise exc
 
         return meta.get(tag) == value
 
-    def has_object_matching(self, key, meta, bucket_name=None):
+    def has_object_matching(
+        self, key: str, meta: dict[str, Any], bucket_name: str | None = None
+    ):
         """check whether we have an object matching all key-value pairs supplied"""
         bucket_name = self._bucket_name_param(bucket_name)
         try:
             (remote,) = self.get_object_head(key, bucket_name, only=[self.META_KEY])
-        except botocore.exceptions.ClientError as exc:
-            error_code = int(exc.response["Error"]["Code"])
-            if error_code == 403:
-                raise AuthenticationError(f"Authorization Error testing key={key}")
-            if error_code == 404:
+        except botocore.exceptions.ClientError as exc:  # pyright: ignore
+            error_code = int(exc.response["Error"]["Code"])  # pyright: ignore
+            if error_code == HTTPStatus.FORBIDDEN:
+                raise AuthenticationError(
+                    f"Authorization Error testing key={key}"
+                ) from exc  # pyright: ignore
+            if error_code == HTTPStatus.NOT_FOUND:
                 return False
             raise exc
 
@@ -500,11 +528,17 @@ class KiwixStorage:
                 return False
         return True
 
-    def get_object(self, key, bucket_name=None):
+    def get_object(self, key: str, bucket_name: str | None = None):
         bucket_name = self._bucket_name_param(bucket_name)
         return self.resource.Object(bucket_name=bucket_name, key=key)
 
-    def get_object_head(self, key, bucket_name=None, unserialize_etag=True, only=None):
+    def get_object_head(
+        self,
+        key: str,
+        bucket_name: str | None = None,
+        unserialize_etag: bool = True,
+        only: list[str] | tuple[str, ...] | None = None,
+    ) -> Any:
         bucket_name = self._bucket_name_param(bucket_name)
         response = self.client.head_object(Bucket=bucket_name, Key=key)
         if unserialize_etag and "ETag" in response.keys():
@@ -513,26 +547,32 @@ class KiwixStorage:
             return [value for key, value in response.items() if key in only]
         return response
 
-    def get_object_stat(self, key, bucket_name=None):
+    def get_object_stat(self, key: str, bucket_name: str | None = None):
         bucket_name = self._bucket_name_param(bucket_name)
         return HeadStat(self.get_object_head(key, bucket_name))
 
-    def get_object_etag(self, key, bucket_name=None):
+    def get_object_etag(self, key: str, bucket_name: str | None = None):
         bucket_name = self._bucket_name_param(bucket_name)
         return self.get_object_stat(key, bucket_name).etag
 
-    def put_text_object(self, key, content, bucket_name=None, **kwargs):
+    def put_text_object(
+        self,
+        key: str,
+        content: str,
+        bucket_name: str | None = None,
+        **kwargs: Any,
+    ):
         """records a simple text file"""
         bucket_name = self._bucket_name_param(bucket_name)
         self.client.put_object(
             Bucket=bucket_name, Key=key, Body=content.encode("UTF-8"), **kwargs
         )
 
-    def delete_object(self, key, bucket_name=None, **kwargs):
+    def delete_object(self, key: str, bucket_name: str | None = None, **kwargs: Any):
         bucket_name = self._bucket_name_param(bucket_name)
         return self.get_object(key=key, bucket_name=bucket_name).delete(**kwargs)
 
-    def allow_public_downloads_on(self, bucket_name=None):
+    def allow_public_downloads_on(self, bucket_name: str | None = None):
         """sets policy on bucket to allow anyone to GET objects (downloads)
 
         TODO: add this policy instead of overwriting everything"""
@@ -543,18 +583,22 @@ class KiwixStorage:
         policy = self.PUBLIC_ACCESS_POLICY.replace("{bucket_name}", bucket_name)
         self.get_bucket(bucket_name).Policy().put(Policy=policy)
 
-    def set_bucket_autodelete_after(self, nb_days, bucket_name=None):
+    def set_bucket_autodelete_after(self, nb_days: int, bucket_name: str | None = None):
         """apply compliance setting RetentionDays and DeleteAfterRetention"""
         if not self.is_wasabi:
             raise NotImplementedError("Only Wasabi at the moment")
 
         bucket_name = self._bucket_name_param(bucket_name)
-        compliance = "<BucketComplianceConfiguration>\n\t<Status>enabled</Status>\n\t<LockTime>off</LockTime>\n\t<RetentionDays>{nb_days}</RetentionDays>\n\t<DeleteAfterRetention>true</DeleteAfterRetention>\n</BucketComplianceConfiguration>".format(
-            nb_days=nb_days
+        compliance = (
+            f"<BucketComplianceConfiguration>\n\t<Status>enabled</Status>\n\t<LockTime>off</LockTime>\n\t"
+            f"<RetentionDays>{nb_days}</RetentionDays>\n\t<DeleteAfterRetention>true</DeleteAfterRetention>\n"
+            "</BucketComplianceConfiguration>"
         )
         return self.set_wasabi_compliance(compliance, key=None, bucket_name=bucket_name)
 
-    def set_object_autodelete_on(self, key, on, bucket_name=None):
+    def set_object_autodelete_on(
+        self, key: str, on: datetime.datetime, bucket_name: str | None = None
+    ):
         """apply compliance setting RetentionTime"""
         if not self.is_wasabi:
             raise NotImplementedError("Only Wasabi at the moment")
@@ -562,12 +606,15 @@ class KiwixStorage:
         if on.tzinfo != datetime.timezone.utc:
             on = on.astimezone(datetime.timezone.utc)
         bucket_name = self._bucket_name_param(bucket_name)
-        compliance = "<ObjectComplianceConfiguration>\n\t<ConditionalHold>false</ConditionalHold>\n\t<RetentionTime>{retention_time}</RetentionTime>\n</ObjectComplianceConfiguration>".format(
+        compliance = (
+            "<ObjectComplianceConfiguration>\n\t<ConditionalHold>false</ConditionalHold>\n\t"
+            "<RetentionTime>{retention_time}</RetentionTime>\n</ObjectComplianceConfiguration>"
+        ).format(
             retention_time=on.isoformat(timespec="seconds").replace("+00:00", "") + "Z"
         )
         return self.set_wasabi_compliance(compliance, key=key, bucket_name=bucket_name)
 
-    def delete_bucket(self, bucket_name=None, force=False):
+    def delete_bucket(self, bucket_name: str | None = None, force: bool = False):
         """delete a bucket
 
         force (bool) only for Wasabi: delete even if there are objects in bucket"""
@@ -579,11 +626,11 @@ class KiwixStorage:
             raise NotImplementedError("Only Wasabi allows force delete")
 
         url = f"{self.wasabi_url}/{bucket_name}?force_delete=true"
-        req = requests.delete(url, auth=self.aws_auth)
+        req = requests.delete(url, auth=self.aws_auth, timeout=REQUESTS_TIMEOUT)
         req.raise_for_status()
         return req
 
-    def rename_bucket(self, new_bucket_name, bucket_name=None):
+    def rename_bucket(self, new_bucket_name: str, bucket_name: str | None = None):
         """change name or a bucket"""
         if not self.is_wasabi:
             raise NotImplementedError("Only Wasabi allows bucket rename")
@@ -591,13 +638,22 @@ class KiwixStorage:
         bucket_name = self._bucket_name_param(bucket_name)
         url = f"{self.wasabi_url}/{bucket_name}"
         req = requests.request(
-            "MOVE", url, headers={"Destination": new_bucket_name}, auth=self.aws_auth
+            "MOVE",
+            url,
+            headers={"Destination": new_bucket_name},
+            auth=self.aws_auth,
+            timeout=REQUESTS_TIMEOUT,
         )
         req.raise_for_status()
         return req.text
 
     def rename_objects(
-        self, key, new_key, overwrite=False, as_prefix=False, bucket_name=None
+        self,
+        key: str,
+        new_key: str,
+        overwrite: bool = False,
+        as_prefix: bool = False,
+        bucket_name: str | None = None,
     ):
         """change key of an object or list of objects
 
@@ -619,17 +675,18 @@ class KiwixStorage:
                 "X-Wasabi-Quiet": "true",
                 "X-Wasabi-Prefix": "true" if as_prefix else "false",
             },
+            timeout=REQUESTS_TIMEOUT,
         )
         req.raise_for_status()
         return req.text
 
     @staticmethod
     def get_aws_auth_for(
-        access_key_id,
-        secret_access_key,
-        host="s3.us-west-1.wasabisys.com",
-        region="",
-        service="s3",
+        access_key_id: str,
+        secret_access_key: str,
+        host: str = "s3.us-west-1.wasabisys.com",
+        region: str = "",
+        service: str = "s3",
     ):
         """prepares AWS Signature v4 headers for requests
 
@@ -642,7 +699,9 @@ class KiwixStorage:
             aws_service=service,
         )
 
-    def get_wasabi_compliance(self, key=None, bucket_name=None):
+    def get_wasabi_compliance(
+        self, key: str | None = None, bucket_name: str | None = None
+    ):
         """apply a compliance to a bucket of object"""
         if not self.is_wasabi:
             raise NotImplementedError("Only Wasabi feature")
@@ -652,11 +711,16 @@ class KiwixStorage:
         if key is not None:
             url += f"/{key}"
         url += "?compliance"
-        req = requests.get(url=url, auth=self.aws_auth)
+        req = requests.get(url=url, auth=self.aws_auth, timeout=REQUESTS_TIMEOUT)
         req.raise_for_status()
         return req.text
 
-    def set_wasabi_compliance(self, compliance, key=None, bucket_name=None):
+    def set_wasabi_compliance(
+        self,
+        compliance: str,
+        key: str | None = None,
+        bucket_name: str | None = None,
+    ):
         """apply a compliance to a bucket of object"""
         if not self.is_wasabi:
             raise NotImplementedError("Only Wasabi feature")
@@ -666,17 +730,19 @@ class KiwixStorage:
         if key is not None:
             url += f"/{key}"
         url += "?compliance"
-        req = requests.put(url=url, auth=self.aws_auth, data=compliance)
+        req = requests.put(
+            url=url, auth=self.aws_auth, data=compliance, timeout=REQUESTS_TIMEOUT
+        )
         req.raise_for_status()
         return req
 
     def _mix_kwargs(
         self,
-        meta=None,
-        progress=False,
-        progress_size=None,
-        progress_fpath=None,
-        **kwargs,
+        meta: dict[str, Any] | None = None,
+        progress: bool | Callable[[int], None] = False,
+        progress_size: int | None = None,
+        progress_fpath: pathlib.Path | None = None,
+        **kwargs: Any,
     ):
         """parse and mix shortcut args with boto3 ones
 
@@ -696,17 +762,22 @@ class KiwixStorage:
         if progress and self.CALLBACK_KEY not in kwargs:
             if callable(progress):
                 kwargs[self.CALLBACK_KEY] = progress
-            else:  # auto-size mode
-                if progress_fpath:
-                    kwargs[self.CALLBACK_KEY] = FileTransferHook(progress_fpath)
-                elif progress_size:
-                    kwargs[self.CALLBACK_KEY] = TransferHook(size=progress_size)
-                else:
-                    kwargs[self.CALLBACK_KEY] = TransferHook()
+            elif progress_fpath:
+                kwargs[self.CALLBACK_KEY] = FileTransferHook(progress_fpath)
+            elif progress_size:
+                kwargs[self.CALLBACK_KEY] = TransferHook(size=progress_size)
+            else:
+                kwargs[self.CALLBACK_KEY] = TransferHook()
         return kwargs
 
     def upload_file(
-        self, fpath, key, bucket_name=None, meta=None, progress=False, **kwargs
+        self,
+        fpath: pathlib.Path,
+        key: str,
+        bucket_name: str | None = None,
+        meta: dict[str, Any] | None = None,
+        progress: bool | Callable[[int], None] = False,
+        **kwargs: Any,
     ):
         """upload a file to the bucket
 
@@ -720,7 +791,13 @@ class KiwixStorage:
         bucket.upload_file(Filename=str(fpath), Key=key, **kwargs)
 
     def upload_fileobj(
-        self, fileobj, key, bucket_name=None, meta=None, progress=False, **kwargs
+        self,
+        fileobj: Any,
+        key: str,
+        bucket_name: str | None = None,
+        meta: dict[str, Any] | None = None,
+        progress: bool | Callable[[int], None] = False,
+        **kwargs: Any,
     ):
         """upload a fileobj to the bucket
 
@@ -741,7 +818,14 @@ class KiwixStorage:
         )
         bucket.upload_fileobj(Fileobj=fileobj, Key=key, **kwargs)
 
-    def download_file(self, key, fpath, bucket_name=None, progress=False, **kwargs):
+    def download_file(
+        self,
+        key: str,
+        fpath: pathlib.Path,
+        bucket_name: str | None = None,
+        progress: bool | Callable[[int], None] = False,
+        **kwargs: Any,
+    ):
         """download object to fpath using boto3
 
         progress (bool): enable default progress report
@@ -753,7 +837,13 @@ class KiwixStorage:
             Key=key, Filename=str(fpath), **kwargs
         )
 
-    def download_matching_file(self, key, fpath, meta, bucket_name=None):
+    def download_matching_file(
+        self,
+        key: str,
+        fpath: pathlib.Path,
+        meta: dict[str, Any],
+        bucket_name: str | None = None,
+    ):
         """download object to file, ensuring a match using a single request
 
         See download_matching_fileobj()"""
@@ -762,9 +852,9 @@ class KiwixStorage:
         # fetch whole object, using custom exception on missing
         try:
             remote = self.get_object(key, bucket_name).get()
-        except botocore.exceptions.ClientError as exc:
-            if exc.response["Error"]["Code"] == "NoSuchKey":
-                raise NotFoundError(str(exc))
+        except botocore.exceptions.ClientError as exc:  # pyright: ignore
+            if exc.response["Error"]["Code"] == "NoSuchKey":  # pyright: ignore
+                raise NotFoundError(str(exc)) from exc  # pyright: ignore
             raise exc
 
         # object exists and downloaded successfuly. Ensure metdata matches
@@ -777,7 +867,12 @@ class KiwixStorage:
                 fh.write(chunk)
 
     def download_fileobj(
-        self, key, fileobj, bucket_name=None, progress=False, **kwargs
+        self,
+        key: str,
+        fileobj: Any,
+        bucket_name: str | None = None,
+        progress: bool | Callable[[int], None] = False,
+        **kwargs: Any,
     ):
         """download object to fileobj using boto3
 
@@ -790,7 +885,13 @@ class KiwixStorage:
             Key=key, Fileobj=fileobj, **kwargs
         )
 
-    def download_matching_fileobj(self, key, fileobj, meta, bucket_name=None):
+    def download_matching_fileobj(
+        self,
+        key: str,
+        fileobj: Any,
+        meta: dict[str, Any],
+        bucket_name: str | None = None,
+    ):
         """download object to fileobj, ensuring a match using a single request
 
         Comparison is performed after retrieval of object.
@@ -802,9 +903,9 @@ class KiwixStorage:
         # fetch whole object, using custom exception on missing
         try:
             remote = self.get_object(key, bucket_name).get()
-        except botocore.exceptions.ClientError as exc:
-            if exc.response["Error"]["Code"] == "NoSuchKey":
-                raise NotFoundError(str(exc))
+        except botocore.exceptions.ClientError as exc:  # pyright: ignore
+            if exc.response["Error"]["Code"] == "NoSuchKey":  # pyright: ignore
+                raise NotFoundError(str(exc)) from exc  # pyright: ignore
             raise exc
 
         # object exists and downloaded successfuly. Ensure metdata matches
@@ -815,7 +916,12 @@ class KiwixStorage:
         for chunk in remote["Body"].iter_chunks():
             fileobj.write(chunk)
 
-    def get_download_url(self, key, bucket_name=None, prefer_torrent=True):
+    def get_download_url(
+        self,
+        key: str,
+        bucket_name: str | None = None,
+        prefer_torrent: bool = True,
+    ) -> str:
         """URL of object for external download
 
         torrent is a shortcut for calling {key}.torrent which is the uploader's
@@ -839,19 +945,19 @@ class KiwixStorage:
 
         # pylint: disable=C0321
 
-        def factor_of_1mb(filesize, num_parts):
+        def factor_of_1mb(filesize: int, num_parts: int):
             part_size = filesize / int(num_parts)
             remainder = part_size % 1048576
             return int(part_size + 1048576 - remainder)
 
-        def possible_partsizes(filesize, num_parts):
+        def possible_partsizes(filesize: int, num_parts: int) -> Callable[[int], bool]:
             return (
                 lambda partsize: partsize < filesize
                 and (float(filesize) / float(partsize)) <= num_parts
             )
 
-        def calc_etag(fpath, partsize):
-            md5_digests = []
+        def calc_etag(fpath: pathlib.Path, partsize: int):
+            md5_digests: list[bytes] = []
             with open(fpath, "rb") as fh:
                 for chunk in iter(lambda: fh.read(partsize), b""):
                     md5_digests.append(hashlib.md5(chunk).digest())  # nosec
@@ -861,7 +967,7 @@ class KiwixStorage:
                 + str(len(md5_digests))
             )
 
-        def md5sum(fpath):
+        def md5sum(fpath: pathlib.Path):
             digest = hashlib.md5()  # nosec
             with open(fpath, "rb") as fh:
                 for chunk in iter(lambda: fh.read(2**20 * 8), b""):

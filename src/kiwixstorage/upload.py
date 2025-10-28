@@ -1,53 +1,56 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
-# vim: ai ts=4 sts=4 et sw=4 nu
 
-""" Simple script to upload a file to a bucket, reusing S3_URL environ
+"""Simple script to upload a file to a bucket, reusing S3_URL environ
 
-    Optional dependencies:
-    - humanfriendly
-    - progressbar2 """
+Optional dependencies:
+- progressbar2"""
 
 import argparse
 import os
 import pathlib
 import sys
 
-from kiwixstorage import KiwixStorage, __version__, format_size
+from kiwixstorage import KiwixStorage, format_size
+from kiwixstorage.__about__ import __version__
 
 try:
     import progressbar
 except ImportError:
     progressbar = None
 
-NAME = "s3upload"
-FULLNAME = f"{NAME} v{__version__}"
-
 
 class CustomProgressBar:
-    def __init__(self, total: int = None):
+    def __init__(self, total: int | None = None):
         widgets = [
             " [",
-            progressbar.Timer(),
+            progressbar.Timer(),  # pyright: ignore[reportOptionalMemberAccess]
             "] ",
-            progressbar.DataSize(),
-            progressbar.Bar(),
-            progressbar.AdaptiveTransferSpeed(),
+            progressbar.DataSize(),  # pyright: ignore[reportOptionalMemberAccess]
+            progressbar.Bar(),  # pyright: ignore[reportOptionalMemberAccess]
+            progressbar.AdaptiveTransferSpeed(),  # pyright: ignore[reportOptionalMemberAccess]
             " (",
-            progressbar.ETA(),
+            progressbar.ETA(),  # pyright: ignore[reportOptionalMemberAccess]
             ") ",
         ]
-        self.bar = progressbar.ProgressBar(max_value=total, widgets=widgets)
+        self.bar = (
+            progressbar.ProgressBar(  # pyright: ignore[reportOptionalMemberAccess]
+                max_value=total, widgets=widgets
+            )
+        )
         self.seen_so_far = 0
 
     def callback(self, bytes_amount: int):
         self.seen_so_far += bytes_amount
-        self.bar.update(self.seen_so_far)
+        self.bar.update(self.seen_so_far)  # pyright: ignore[reportOptionalMemberAccess]
 
 
-def do_upload_file(url: str, fpath: pathlib.Path, key: str = None):
+NAME = "s3upload"
+FULLNAME = f"{NAME} v{__version__}"
+
+
+def do_upload_file(url: str, fpath: pathlib.Path, key: str | None = None):
     if not fpath.exists():
-        raise IOError(f"{fpath} missing.")
+        raise OSError(f"{fpath} missing.")
     fsize = fpath.stat().st_size
     if not key:
         key = fpath.name
@@ -57,7 +60,10 @@ def do_upload_file(url: str, fpath: pathlib.Path, key: str = None):
 
     if s3.has_object(key):
         raise ValueError(f"Key `{key}` already exists at {dest}. Specify another one.")
-    print(f"Uploading {fpath.name} ({format_size(fsize)}) to {dest}/{key}", flush=True)
+    print(  # noqa: T201
+        f"Uploading {fpath.name} ({format_size(fsize)}) to {dest}/{key}",
+        flush=True,
+    )
 
     progress = CustomProgressBar(fsize).callback if progressbar else True
     s3.upload_file(fpath=fpath, key=key, progress=progress)
@@ -106,8 +112,8 @@ def upload_file():
     try:
         sys.exit(do_upload_file(**kwargs))
     except Exception as exc:
-        print(f"FAILED. An error occurred: {exc}")
-        raise SystemExit(1)
+        print(f"FAILED. An error occurred: {exc}")  # noqa: T201
+        raise SystemExit(1) from exc
 
 
 if __name__ == "__main__":
