@@ -11,6 +11,7 @@ as of 0.8.2
 ### Added
 
 - configure resources with user-specified timeouts
+- Updated Python version requirement to 3.10-3.14
 
 ## [0.9.0]
 
