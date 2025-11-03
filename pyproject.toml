@@ -10,6 +10,7 @@ authors = [
 keywords = ["kiwix", "zim", "offline", "aws", "s3"]
 requires-python = ">=3.10,<3.15"
 description = "Kiwix S3 Cache wrapper to use within Kiwix/OpenZIM projects"
+readme = "README.md"
 license = {text = "GPLv3+"}
 classifiers = [
     "Intended Audience :: Developers",
