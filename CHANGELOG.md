@@ -8,6 +8,10 @@ as of 0.8.2
 
 ## [Unreleased]
 
+### Fixed
+
+- Add readme to pyproject.toml (#18)
+
 ## [0.10.0]
 
 ### Added
