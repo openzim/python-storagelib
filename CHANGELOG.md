@@ -6,12 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html),
 as of 0.8.2
 
-## [Unreleased]
+## [0.10.0]
 
 ### Added
 
-- configure resources with user-specified timeouts
-- Updated Python version requirement to 3.10-3.14
+- Configure resources with user-specified timeouts (#12)
+- Updated Python version requirement to 3.10-3.14 (#16)
 
 ## [0.9.0]
 
