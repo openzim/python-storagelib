@@ -6,20 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html),
 as of 0.8.2
 
-## [Unreleased]
+## [0.10.1] - 2025-11-10
 
 ### Fixed
 
 - Add readme to pyproject.toml (#18)
+- Loosen dependency ranges (#21)
 
-## [0.10.0]
+## [0.10.0] - 2025-11-03
 
 ### Added
 
 - Configure resources with user-specified timeouts (#12)
 - Updated Python version requirement to 3.10-3.14 (#16)
 
-## [0.9.0]
+## [0.9.0] - 2024-05-08
 
 ### Added
 
