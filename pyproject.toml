@@ -24,10 +24,10 @@ classifiers = [
     "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
 ]
 dependencies = [
-    "boto3 >=1.12.39,<1.38.0",
-    "requests >= 2.23,<2.32.4",
-    "aws-requests-auth >=0.4.2,<0.5",
-    "humanfriendly >=10.0,<11",
+    "boto3 >=1.12.39,<2",
+    "requests >= 2.23,<3",
+    "aws-requests-auth >=0.4.2,<1",
+    "humanfriendly >=10.0",
 ]
 dynamic = ["version"]
 
