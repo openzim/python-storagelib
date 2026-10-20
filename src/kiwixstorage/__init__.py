@@ -37,7 +37,7 @@ REQUESTS_TIMEOUT = parse_timespan(os.getenv("REQUESTS_TIMEOUT_DURATION", default
 
 def getnow():
     """naive UTC now"""
-    return datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
+    return datetime.datetime.now(datetime.UTC).replace(tzinfo=None)
 
 
 class TransferHook:
@@ -303,9 +303,7 @@ class KiwixStorage:
         bucket_name = self._bucket_name_param(bucket_name)
         if not bucket_name:
             raise ValueError("Can't test for bucket without a bucket name")
-        if (
-            self.get_bucket(bucket_name).creation_date is None
-        ):  # pyright: ignore[reportUnnecessaryComparison]
+        if self.get_bucket(bucket_name).creation_date is None:  # pyright: ignore[reportUnnecessaryComparison]
             raise AuthenticationError("Bucket doesn't exist of not reachable")
 
     def test_access_write(
@@ -603,8 +601,8 @@ class KiwixStorage:
         if not self.is_wasabi:
             raise NotImplementedError("Only Wasabi at the moment")
 
-        if on.tzinfo != datetime.timezone.utc:
-            on = on.astimezone(datetime.timezone.utc)
+        if on.tzinfo != datetime.UTC:
+            on = on.astimezone(datetime.UTC)
         bucket_name = self._bucket_name_param(bucket_name)
         compliance = (
             "<ObjectComplianceConfiguration>\n\t<ConditionalHold>false</ConditionalHold>\n\t"
@@ -951,9 +949,8 @@ class KiwixStorage:
             return int(part_size + 1048576 - remainder)
 
         def possible_partsizes(filesize: int, num_parts: int) -> Callable[[int], bool]:
-            return (
-                lambda partsize: partsize < filesize
-                and (float(filesize) / float(partsize)) <= num_parts
+            return lambda partsize: (
+                partsize < filesize and (float(filesize) / float(partsize)) <= num_parts
             )
 
         def calc_etag(fpath: pathlib.Path, partsize: int):
