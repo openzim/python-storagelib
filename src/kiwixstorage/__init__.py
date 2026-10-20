@@ -341,7 +341,7 @@ class KiwixStorage:
             self.put_text_object(key, key, bucket_name=bucket_name)
 
         try:
-            self.client.delete_object(Bucket=self.bucket_name, Key=key)
+            self.client.delete_object(Bucket=bucket_name, Key=key)
         except Exception as exc:
             raise exc
 
@@ -374,7 +374,7 @@ class KiwixStorage:
         write (str) test for write access on a specific key
         read (bool) test for read access on written object (only if write)
         read (str): test for read access on specific key"""
-        if not list_buckets and not bucket and not write and not read:
+        if not list_buckets and not bucket and not write and not read and not delete:
             raise ValueError("Nothing to test your credentials over.")
         try:
             if list_buckets:
