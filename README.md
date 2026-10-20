@@ -13,6 +13,10 @@ Users could limit usage to this and use [boto3](https://boto3.amazonaws.com/) di
 A few additional wrappers are in place to simplify common actions.
 Also, non-S3, wasabi-specific features are exposed directly.
 
+kiwixstorage adheres to openZIM's [Contribution Guidelines](https://github.com/openzim/overview/wiki/Contributing).
+
+kiwixstorage has implemented openZIM's [Python bootstrap, conventions and policies](https://github.com/openzim/_python-bootstrap/blob/main/docs/Policy.md) v2.0.0.
+
 # Usage
 
 ``` sh
