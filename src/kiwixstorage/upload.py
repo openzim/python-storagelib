@@ -32,10 +32,8 @@ class CustomProgressBar:
             progressbar.ETA(),  # pyright: ignore[reportOptionalMemberAccess]
             ") ",
         ]
-        self.bar = (
-            progressbar.ProgressBar(  # pyright: ignore[reportOptionalMemberAccess]
-                max_value=total, widgets=widgets
-            )
+        self.bar = progressbar.ProgressBar(  # pyright: ignore[reportOptionalMemberAccess]
+            max_value=total, widgets=widgets
         )
         self.seen_so_far = 0
 

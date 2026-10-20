@@ -10,18 +10,13 @@ repos:
       - id: mixed-line-ending
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.11.10
+    rev: v0.15.12
     hooks:
       - id: ruff-check
       - id: ruff-format
 
-  - repo: https://github.com/psf/black
-    rev: "24.8.0"
-    hooks:
-      - id: black
-
   - repo: https://github.com/RobertCraigie/pyright-python
-    rev: v1.1.407
+    rev: v1.1.400
     hooks:
       - id: pyright
         name: pyright (system)

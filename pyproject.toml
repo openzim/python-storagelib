@@ -8,7 +8,7 @@ authors = [
   { name = "Kiwix", email = "dev@kiwix.org" },
 ]
 keywords = ["kiwix", "zim", "offline", "aws", "s3"]
-requires-python = ">=3.10,<3.15"
+requires-python = ">=3.11,<3.16"
 description = "Kiwix S3 Cache wrapper to use within Kiwix/OpenZIM projects"
 readme = "README.md"
 license = {text = "GPLv3+"}
@@ -16,11 +16,11 @@ classifiers = [
     "Intended Audience :: Developers",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
     "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
 ]
 dependencies = [
@@ -38,13 +38,9 @@ progress = [
 scripts = [
     "invoke == 2.2.0",
 ]
-lint = [
-    "black == 24.8.0",
-    "ruff == 0.11.10",
-]
-
-check = [
-    "pyright == 1.1.407",
+qa = [
+    "ruff==0.15.12",
+    "pyright==1.1.400",
     "types-humanfriendly == 10.0.0",
     "types-boto3[essential] >= 1.12.39,<1.38.0",
     "aws-requests-auth-stubs == 0.4.3.2"
@@ -56,9 +52,8 @@ test = [
 dev = [
     "pre-commit == 3.5.0",
     "kiwixstorage[scripts]",
-    "kiwixstorage[lint]",
+    "kiwixstorage[qa]",
     "kiwixstorage[test]",
-    "kiwixstorage[check]",
     "kiwixstorage[progress]",
 ]
 
@@ -94,33 +89,24 @@ report-cov = "inv report-cov"
 coverage = "inv coverage --args '{args}'"
 html = "inv coverage --html --args '{args}'"
 
-[tool.hatch.envs.lint]
-template = "lint"
+[tool.hatch.envs.qa]
+template = "qa"
 skip-install = false
-features = ["scripts", "lint"]
+features = ["scripts", "qa", "test"]
 
 [tool.hatch.envs.lint.scripts]
-black = "inv lint-black --args '{args}'"
-ruff = "inv lint-ruff --args '{args}'"
-all = "inv lintall --args '{args}'"
-fix-black = "inv fix-black --args '{args}'"
-fix-ruff = "inv fix-ruff --args '{args}'"
-fixall = "inv fixall --args '{args}'"
+check-lint = "inv check-lint --args '{args}'"
+check-format = "inv check-format --args '{args}'"
+check-type = "inv check-type --args '{args}'"
+check-all = "inv check-all --args '{args}'"
+fix-format = "inv fix-format --args '{args}'"
+fix-lint = "inv fix-lint --args '{args}'"
+fix-all = "inv fix-all --args '{args}'"
 
-[tool.hatch.envs.check]
-features = ["scripts", "test", "check"]
-
-[tool.hatch.envs.check.scripts]
-pyright = "inv check-pyright --args '{args}'"
-all = "inv checkall --args '{args}'"
-
-[tool.black]
-line-length = 88
-target-version = ['py310']
 
 [tool.ruff]
 line-length = 88
-target-version = "py310"
+target-version = "py311"
 src = ["src"]
 
 [tool.ruff.lint]
@@ -248,5 +234,5 @@ exclude_lines = [
 include = ["src", "tests", "tasks.py"]
 exclude = [".env/**", ".venv/**"]
 extraPaths = ["src"]
-pythonVersion = "3.10"
+pythonVersion = "3.11"
 typeCheckingMode="strict"
