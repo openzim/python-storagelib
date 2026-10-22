@@ -6,11 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html),
 as of 0.8.2
 
-## [Unreleased]
+## [0.11.0] - 2026-10-22
 
-- Updated Python version requirement to 3.11-3.15 (#24)
-- allow tests for delete permissions without listing buckets (#25)
-- Upgrade dependencies and GitHub Actions
+### Changed
+
+- Drop support for Python 3.10, add support for Python 3.15 (#23)
+- Allow tests for delete permissions without listing buckets (#22)
+- Add contribution and policy guidelines in README (#27)
+- Upgrade dependencies and GitHub Actions (#30)
 
 ## [0.10.1] - 2025-11-10
 
