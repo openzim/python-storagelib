@@ -10,6 +10,7 @@ as of 0.8.2
 
 - Updated Python version requirement to 3.11-3.15 (#24)
 - allow tests for delete permissions without listing buckets (#25)
+- Upgrade dependencies and GitHub Actions
 
 ## [0.10.1] - 2025-11-10
 

@@ -8,7 +8,7 @@ Users could limit usage to this and use boto3 directly from there.
 A few additional wrappers are in place to simplify common actions.
 Also, non-S3, wasabi-specific features are exposed directly."""
 
-import datetime
+import datetime as dt
 import hashlib
 import io
 import json
@@ -37,7 +37,7 @@ REQUESTS_TIMEOUT = parse_timespan(os.getenv("REQUESTS_TIMEOUT_DURATION", default
 
 def getnow():
     """naive UTC now"""
-    return datetime.datetime.now(datetime.UTC).replace(tzinfo=None)
+    return dt.datetime.now(dt.UTC).replace(tzinfo=None)
 
 
 class TransferHook:
@@ -356,7 +356,8 @@ class KiwixStorage:
         else:
             raise ValueError(f"Can't test read with missing key: {key}")
 
-    def check_credentials(
+    # keep positional args for backward compatibility until next major release
+    def check_credentials(  # noqa: PLR0917
         self,
         list_buckets: bool = False,
         bucket: str | bool = False,
@@ -595,14 +596,14 @@ class KiwixStorage:
         return self.set_wasabi_compliance(compliance, key=None, bucket_name=bucket_name)
 
     def set_object_autodelete_on(
-        self, key: str, on: datetime.datetime, bucket_name: str | None = None
+        self, key: str, on: dt.datetime, bucket_name: str | None = None
     ):
         """apply compliance setting RetentionTime"""
         if not self.is_wasabi:
             raise NotImplementedError("Only Wasabi at the moment")
 
-        if on.tzinfo != datetime.UTC:
-            on = on.astimezone(datetime.UTC)
+        if on.tzinfo != dt.UTC:
+            on = on.astimezone(dt.UTC)
         bucket_name = self._bucket_name_param(bucket_name)
         compliance = (
             "<ObjectComplianceConfiguration>\n\t<ConditionalHold>false</ConditionalHold>\n\t"

@@ -33,24 +33,24 @@ dynamic = ["version"]
 
 [project.optional-dependencies]
 progress = [
-    "progressbar2 == 4.5.0"
+    "progressbar2 == 4.6.0"
 ]
 scripts = [
-    "invoke == 2.2.0",
+    "invoke == 3.0.3",
 ]
 qa = [
-    "ruff==0.15.12",
-    "pyright==1.1.400",
-    "types-humanfriendly == 10.0.0",
-    "types-boto3[essential] >= 1.12.39,<1.38.0",
+    "ruff==0.17.1",
+    "pyright==1.1.414",
+    "types-humanfriendly == 10.0.1.20250319",
+    "types-boto3[essential] >= 1.12.39,<1.44.0",
     "aws-requests-auth-stubs == 0.4.3.2"
 ]
 test = [
-    "coverage == 7.6.1",
-    "pytest == 8.3.5",
+    "coverage == 7.16.2",
+    "pytest == 9.1.1",
 ]
 dev = [
-    "pre-commit == 3.5.0",
+    "pre-commit == 4.7.0",
     "kiwixstorage[scripts]",
     "kiwixstorage[qa]",
     "kiwixstorage[test]",
@@ -90,11 +90,9 @@ coverage = "inv coverage --args '{args}'"
 html = "inv coverage --html --args '{args}'"
 
 [tool.hatch.envs.qa]
-template = "qa"
-skip-install = false
-features = ["scripts", "qa", "test"]
+features = ["scripts", "qa", "test", "progress"]
 
-[tool.hatch.envs.lint.scripts]
+[tool.hatch.envs.qa.scripts]
 check-lint = "inv check-lint --args '{args}'"
 check-format = "inv check-format --args '{args}'"
 check-type = "inv check-type --args '{args}'"
@@ -207,7 +205,7 @@ ban-relative-imports = "all"
 "tests/**/*" = ["PLR2004", "S101", "TID252"]
 
 [tool.pytest.ini_options]
-minversion = "8.3.5"
+minversion = "9.1.1"
 testpaths = ["tests"]
 pythonpath = [".", "src"]
 

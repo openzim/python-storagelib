@@ -27,11 +27,12 @@ pip install kiwixstorage
 
 ``` py
 from kiwixstorage import KiwixStorage
+
 url = "https://s3.us-east-1.wasabisys.com/?keyId=x&secretAccessKey=y&bucketName=z"
 s3 = KiwixStorage(url)
 # test credentials and ensure we can list buckets
 if not s3.check_credentials(list_buckets=True, failsafe=True):
-    return # bad auth
+    return  # bad auth
 ```
 
 ## Scraper use-case
@@ -76,7 +77,6 @@ s3.download_file(key, fpath)
 
 # get URL for external download
 s3.get_download_url(key)
-
 ```
 
 # Resources:
